@@ -67,7 +67,7 @@ python fbps.py -A https://example.com
 4. Using custom Headers, Cookies and Body
 
 ```bash
-python fbps.py -H "User-Agent: fuzzing-tool" -c "test=123" -b "user=user&password=pass" -m GET https://example.com
+python fbps.py -H "User-Agent: fuzzing-tool" -c "test=1; foo=2" -b "user=user&password=pass" -m GET https://example.com
 ```
 
 5. Specify number of threads (default=5)
