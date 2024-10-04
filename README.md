@@ -25,7 +25,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-L LEVEL] [-A] [-v] [-o OUTPUT] [-t THREADS] [-p PROXY] [--insecure] url
+python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-L LEVEL] [-A] [-v] [-o OUTPUT] [-t THREADS] [-p PROXY] [--insecure] url
 
 ## Options
 
