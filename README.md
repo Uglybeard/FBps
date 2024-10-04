@@ -30,9 +30,9 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-L LEVEL] [-
 ## Options
 
 - `-m, --method` Specify one or more HTTP methods, separated by commas (e.g., GET,POST,HEAD). The default method is GET.
-- `-H, --header` Specify headers in Key: Value format (can be used multiple times).
+- `-H, --header` Specify headers in `Key: Value` format (can be used multiple times).
 - `-b, --body` Specify the request body.
-- `-c, --cookies` Specify cookies.
+- `-c, --cookies` Specify cookies in `Key = Value` format. Multiple cookies should be separated by a semicolon (;).
 - `-A, --all` Perform all tests with common HTTP methods.
 - `-L, --level`: Specify the level of tests to perform, from 1 to 3 (default: 1). Each level includes all tests from the previous levels:
     - Level 1: URL fuzzing, protocol switching.
