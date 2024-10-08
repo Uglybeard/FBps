@@ -112,7 +112,7 @@ def found():
 def uppercase_success():
     return jsonify(message="Bypass success!"), 200
 
-#-------------------OTHER ROUTES HANDLER-----------------------
+#--------------------------------------------------------------
 
 @app.before_request
 def handle_options_request():
@@ -123,8 +123,6 @@ def handle_options_request():
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify(error="Not Found."), 404
-
-#--------------------------------------------------------------
 
 if __name__ == '__main__':
     # Run the Flask app in debug mode (for development)
