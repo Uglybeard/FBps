@@ -56,7 +56,7 @@ def forbidden():
     session_cookie = request.cookies.get('session')
     body_user = request.form.get('user')
     body_password = request.form.get('password')
-    print(f"User: {body_user}, Password: {body_password}")
+
     if client_ip == TRUSTED_IP:
         return jsonify(message="Access granted for IP: " + client_ip), 200
     # Returns 200 OK if Bearer header is set to the correct Session header value
