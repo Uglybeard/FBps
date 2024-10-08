@@ -9,7 +9,7 @@ parent_dir = pathlib.Path(__file__).parent.parent
 positive_results = []
 output_results = []
 
-def print_status(method, status, url, headers="", cookies="", body="", verbose=False, response_length=0, output_file=None):
+def print_status(method, status, url, min_length, headers="", cookies="", body="", verbose=False, response_length=0, output_file=None):
     """
     Prints the HTTP request result, using different colors for success (2xx) and failure.
     Also prints the length of the response.
@@ -41,7 +41,10 @@ def print_status(method, status, url, headers="", cookies="", body="", verbose=F
         with open(output_file,"a") as f:
             f.write(plain_line)
 
-
+    # If response length is less than minimum length, skip the result
+    if min_length and response_length<min_length:
+        return 0
+    
     if status.startswith("2"):  # Store positive results (console output)
         positive_results.append(
             f"\n{'-' * 60}\n[+] Method:     {method:<{method_column_width}}\n"
@@ -98,7 +101,7 @@ def print_ordered_results(output_file=None):
                 for res in method_results[method]:
                     f.write(res + "\n")
 
-def test_url(url, method, headers, body, cookie, verbose, proxy=None, insecure=False, output_file=None):
+def test_url(url, method, min_length, headers, body, cookie, verbose, proxy=None, insecure=False, output_file=None):
     """
     Executes a single HTTP request with the given parameters and prints the result.
     Also returns the response length.
@@ -120,7 +123,7 @@ def test_url(url, method, headers, body, cookie, verbose, proxy=None, insecure=F
             verify=not insecure # Ignore SSL verification if the "insecure" flag is enabled. "Verify" is equal to False if "insecure" is true, otherwise it is equal to True.
         )
         response_length = len(response.content)  # Get the length of the response content
-        return print_status(method, str(response.status_code), url, headers, cookies, body, verbose, response_length, output_file)
+        return print_status(method, str(response.status_code), url, min_length, headers, cookies, body, verbose, response_length, output_file)
     except requests.RequestException as e:
         if verbose:
             print(f"[+] [ {method} ] {url} - \033[0;31mError: {e}\033[0m")
@@ -131,7 +134,7 @@ def test_url(url, method, headers, body, cookie, verbose, proxy=None, insecure=F
         
         return 0
 
-def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, num_threads, proxy, insecure, level, all, output_file=None):
+def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length, num_threads, proxy, insecure, level, all, output_file=None):
     """
     Performs fuzz testing across various HTTP methods, headers, and URL fuzzing using multithreading.
     """
@@ -213,18 +216,18 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, num_th
                         headers_dict[header_parts[0].strip()] = header_parts[1].strip()
 
                         # Test both the original and alternate URL versions concurrently
-                        futures.append(executor.submit(test_url, target_url, method, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
-                        futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
+                        futures.append(executor.submit(test_url, target_url, method, min_length, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
+                        futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
 
         # Add multithreaded tasks for fuzzed URLs
         for url in urls_to_test:
             for method in methods:
-                futures.append(executor.submit(test_url, url, method, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, url, method, min_length, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
 
         for param in params:
             for method in methods:
-                futures.append(executor.submit(test_url, target_url+"?"+param, method, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
-                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, target_url+"?"+param, method, min_length, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, min_length, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
 
         # Collect the results as tasks complete
         for future in as_completed(futures):

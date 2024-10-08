@@ -19,6 +19,7 @@ def main():
     all = args.all
     output_file = args.output
     level = args.level
+    min_length = args.min_length
 
     # Suppress InsecureRequestWarning if insecure
     if(insecure):
@@ -38,7 +39,7 @@ def main():
     start_time = time.time()
     
     # Perform fuzz testing across all HTTP methods
-    success_count = forbidden_bypass(target_url, headers, body, cookie, methods, verbose, num_threads, proxy, insecure, level, all, output_file)
+    success_count = forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length, num_threads, proxy, insecure, level, all, output_file)
 
     # Print the number of bypasses found and the time taken
     end_time = time.time()
