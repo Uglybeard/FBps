@@ -18,7 +18,11 @@ def print_status(method, status, url, headers="", cookies="", body="", verbose=F
     url_column_width = 90
     response_len_column_width = 6
 
-    status_color = "\033[0;32m" if status.startswith("2") else "\033[0;31m"
+    if status.startswith("2"):
+        status_color="\033[0;32m"
+    elif status.startswith("3"):
+        status_color="\033[93m"
+    else: status_color="\033[0;31m"
 
     colored_line = (
         f"[+] {method:<{method_column_width}} | {status_color}{status}\033[0m | Length: {response_length:<{response_len_column_width}} | "
@@ -105,7 +109,7 @@ def test_url(url, method, headers, body, cookie, verbose, proxy=None, insecure=F
 
         # Parse cookie
         cookies = parse_cookies(cookie)
-
+        
         response = requests.request(
             method,
             url,
