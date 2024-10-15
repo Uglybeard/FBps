@@ -25,8 +25,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-A] [-L LEVEL] [-v] [-o OUTPUT] [-t THREADS] [-p PROXY] [--min-length MIN_LENGTH] [--insecure] url
-
+python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-L LEVEL] [-A] [-v] [-o OUTPUT] [-t THREADS] [-p PROXY] [--insecure] url
 
 ## Options
 
@@ -43,7 +42,6 @@ fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-A] [-L LEVEL] [-v]
 - `-o, --output` Specify an output file to save the results.
 - `-t, --threads` Specify number of threads (default: 5).
 - `-p, --proxy` Specify SOCKS proxy (format: socks5h://user:pass@host:port).
-- `--min-length` Skip responses with a length less than the specified value.
 - `--insecure` Skip SSL certificate verification and suppress warnings.
 - `-h, --help` Display this help message.
 
