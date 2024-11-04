@@ -20,17 +20,22 @@ def print_status(method, status, url, min_length, exclude_length, headers="", co
 
     if status.startswith("2"):
         status_color="\033[0;32m"
+        symbol="[+]"
     elif status.startswith("3"):
         status_color="\033[93m"
-    else: status_color="\033[0;31m"
+        symbol="[?]"
+    else: 
+        status_color="\033[0;31m"
+        symbol="[-]"
+
 
     colored_line = (
-        f"[+] {method:<{method_column_width}} | {status_color}{status}\033[0m | Length: {response_length:<{response_len_column_width}} | "
+        f"{symbol} {method:<{method_column_width}} | {status_color}{status}\033[0m | Length: {response_length:<{response_len_column_width}} | "
         f"{url:<{url_column_width}} | Headers: {headers}"
     )
 
     plain_line = (
-        f"[+] {method:<{method_column_width}} | {status} | Length: {response_length:<{response_len_column_width}} | "
+        f"{symbol} {method:<{method_column_width}} | {status} | Length: {response_length:<{response_len_column_width}} | "
         f"{url:<{url_column_width}} | Headers: {headers}\n"
     )
 
@@ -129,11 +134,11 @@ def test_url(url, method, min_length, exclude_length, headers, body, cookie, ver
         return print_status(method, str(response.status_code), url, min_length, exclude_length, headers, cookies, body, verbose, response_length, output_file)
     except requests.RequestException as e:
         if verbose:
-            print(f"[+] [ {method} ] {url} - \033[0;31mError: {e}\033[0m")
+            print(f"[!] [ {method} ] {url} - \033[0;31mError: {e}\033[0m")
         
         if output_file:
             with open(output_file,"a") as f:
-                f.write(f"[+] [ {method} ] {url} - Error: {e}")
+                f.write(f"[!] [ {method} ] {url} - Error: {e}")
         
         return 0
 
