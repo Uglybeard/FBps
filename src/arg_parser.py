@@ -17,7 +17,7 @@ def parse_arguments():
     parser.add_argument("-t", "--threads", type=int, default=5, help="Specify number of threads (default: 5)")
     parser.add_argument("-p", "--proxy", help="Specify SOCKS proxy (format: socks5h://user:pass@host:port)")
     parser.add_argument("--min-length", type=int, help="Skip responses with a length less than the specified value")
-    parser.add_argument("--exclude-length", type=int, help="Skip responses with a length equal to the specified value")
+    parser.add_argument("--exclude-length", type=str, help="Comma-separated list of response lengths to exclude")  # Change to string
     parser.add_argument("--insecure", action="store_true", help="Skip SSL certificate verification and suppress related warnings")
     parser.add_argument("url", help="The target URL")
     return parser.parse_args()

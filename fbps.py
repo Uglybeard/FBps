@@ -20,7 +20,7 @@ def main():
     output_file = args.output
     level = args.level
     min_length = args.min_length
-    exclude_length = args.exclude_length
+    exclude_length = args.exclude_length  # No need to convert to string here
 
     # Suppress InsecureRequestWarning if insecure
     if(insecure):
