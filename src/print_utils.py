@@ -29,7 +29,7 @@ def log_error(method, url, error, output_file=None):
     error_message = f"[!] {method} {url} - \033[0;31mError: {error}\033[0m"
     if output_file:
         with open(output_file, "a") as f:
-            f.write(f"[!] {method} {url} - Error: {error}")
+            f.write(f"[!] {method} {url} - Error: {error}\n")
     return error_message
 
 def print_status(method, status, url, min_length, exclude_lengths, headers="", cookies="", body="", verbose=False, response_length=0, output_file=None):
