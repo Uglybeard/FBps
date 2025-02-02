@@ -15,8 +15,8 @@ def print_status(method, status, url, min_length, exclude_length, headers="", co
     Also prints the length of the response.
     """
     method_column_width = 7
-    url_column_width = 90
-    response_len_column_width = 6
+    url_column_width = 60
+    response_len_column_width = 5
 
     if status.startswith("2"):
         status_color="\033[0;32m"
@@ -30,12 +30,12 @@ def print_status(method, status, url, min_length, exclude_length, headers="", co
 
 
     colored_line = (
-        f"{symbol} {method:<{method_column_width}} | {status_color}{status}\033[0m | Length: {response_length:<{response_len_column_width}} | "
+        f"{symbol} {method:<{method_column_width}} | {status_color}{status}\033[0m | Len: {response_length:<{response_len_column_width}} | "
         f"{url:<{url_column_width}} | Headers: {headers}"
     )
 
     plain_line = (
-        f"{symbol} {method:<{method_column_width}} | {status} | Length: {response_length:<{response_len_column_width}} | "
+        f"{symbol} {method:<{method_column_width}} | {status} | Len: {response_length:<{response_len_column_width}} | "
         f"{url:<{url_column_width}} | Headers: {headers}\n"
     )
 
