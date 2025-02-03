@@ -26,6 +26,10 @@ def log_error(method, url, error, output_file=None):
     """
     Logs an error message.
     """
+    if "Failed to parse" in str(error):
+        # Ignore specific URL parsing errors
+        return None
+    
     error_message = f"[!] {method} {url} - \033[0;31mError: {error}\033[0m"
     if output_file:
         with open(output_file, "a") as f:

@@ -39,8 +39,9 @@ def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, ve
         response_length = len(response.content)
         return print_status(method, str(response.status_code), url, min_length, exclude_lengths, headers, cookies, body, verbose, response_length, output_file)
     except requests.RequestException as e:
-        if verbose:
-            print(log_error(method, url, e, output_file))
+        error_message = log_error(method, url, e, output_file)
+        if verbose and error_message:
+            print(error_message)
         return 0
 
 def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level):
@@ -79,7 +80,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
             temp_path = path_parts[:]
             for variation in generate_case_variations(path_parts[i]):
                 temp_path[i] = variation
-                case_variation_url = f"{base_url}/{'/'.join(temp_path)}"
+                case_variation_url = f"{base_url}{'/'.join(temp_path)}"
                 urls_to_test.add(case_variation_url)
                 urls_to_test.add(case_variation_url.rstrip('/') if case_variation_url.endswith('/') else case_variation_url + '/')
 
