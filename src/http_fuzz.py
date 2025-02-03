@@ -50,12 +50,16 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     """
     urls_to_test = set()
     parsed_url = urlparse(target_url)
-    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}"
+    base_url = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+    base_url_without_slash = f"{parsed_url.scheme}://{parsed_url.netloc}"
     path_parts = parsed_url.path.split('/')
 
     for fuzz in fuzz_paths:
         for i in range(1, len(path_parts) + 1):
-            fuzzed_url = f"{base_url}{'/'.join(path_parts[1:i])}/{fuzz}/{'/'.join(path_parts[i:])}"
+            if i==1:
+                fuzzed_url = f"{base_url}{'/'.join(path_parts[1:i])}{fuzz}/{'/'.join(path_parts[i:])}"
+            else:
+                fuzzed_url = f"{base_url}{'/'.join(path_parts[1:i])}/{fuzz}/{'/'.join(path_parts[i:])}"
             urls_to_test.add(fuzzed_url)
             urls_to_test.add(fuzzed_url.rstrip('/') if fuzzed_url.endswith('/') else fuzzed_url + '/')
 
@@ -80,7 +84,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
             temp_path = path_parts[:]
             for variation in generate_case_variations(path_parts[i]):
                 temp_path[i] = variation
-                case_variation_url = f"{base_url}{'/'.join(temp_path)}"
+                case_variation_url = f"{base_url_without_slash}{'/'.join(temp_path)}"
                 urls_to_test.add(case_variation_url)
                 urls_to_test.add(case_variation_url.rstrip('/') if case_variation_url.endswith('/') else case_variation_url + '/')
 
