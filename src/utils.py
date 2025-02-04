@@ -1,5 +1,5 @@
 from requests.structures import CaseInsensitiveDict
-import itertools
+import random
 
 def load_list_from_file(filename):
     """
@@ -14,9 +14,29 @@ def load_list_from_file(filename):
 
 def generate_case_variations(s):
     """
-    Generates all upper and lower case combinations for a string.
+    Generates five specific upper and lower case combinations for a string.
     """
-    return map(''.join, itertools.product(*([char.lower(), char.upper()] for char in s)))
+    variations = set()
+    
+    # All lowercase
+    variations.add(s.lower())
+    
+    # All uppercase
+    variations.add(s.upper())
+    
+    # First character uppercase
+    if s:
+        variations.add(s[0].upper() + s[1:].lower())
+    
+    # Last character uppercase
+    if s:
+        variations.add(s[:-1].lower() + s[-1].upper())
+    
+    # Random mixed case (casual uppercase)
+    random_case = ''.join(random.choice([char.lower(), char.upper()]) for char in s)
+    variations.add(random_case)
+    
+    return list(variations)
 
 def parse_headers(headers_list):
     """

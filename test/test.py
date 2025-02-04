@@ -108,7 +108,7 @@ def found():
 #------------------------UPPERCASE TEST------------------------
 
 # Route that returns a 200 OK
-@app.route('/bYpaSs', methods=['GET', 'POST'])
+@app.route('/bypasS', methods=['GET', 'POST'])
 def uppercase_success():
     return jsonify(message="Bypass success!"), 200
 
