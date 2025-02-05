@@ -11,6 +11,7 @@ FBps (Forbidden Bypass) is a fast and efficient fuzzing script designed for bypa
 - **Body and Cookie Support**: Customize your requests with a specified body and cookies to simulate different user sessions.
 - **URL Fuzzing**: Automatically generate variations of the target URL to uncover hidden endpoints or methods.
 - **Uppercase Tests**: Test for case sensitivity in paths (e.g., /path vs /PaTh).
+- **Off by Slash**: Test for variations in URL paths by adding or removing trailing slashes.
 - **Multithreading**: Leverage multiple threads to speed up testing and increase the efficiency of your requests.
 - **Proxy Support**: Route requests through SOCKS proxies for anonymity and to bypass network restrictions.
 - **Verbose Mode**: Enable detailed output for in-depth analysis of each request and response.
@@ -37,13 +38,14 @@ fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-A] [-L LEVEL] [-v]
 - `-A, --all` Perform all tests with common HTTP methods.
 - `-L, --level`: Specify the level of tests to perform, from 1 to 3 (default: 1). Each level includes all tests from the previous levels:
     - Level 1: URL fuzzing, protocol switching.
-    - Level 2: Headers fuzzing.
-    - Level 3: Uppercase URL variations.
+    - Level 2: Headers fuzzing and Uppercase URL variations.
+    - Level 3: Off by slash.
 - `-v, --verbose` Enable verbose output.
 - `-o, --output` Specify an output file to save the results.
 - `-t, --threads` Specify number of threads (default: 5).
 - `-p, --proxy` Specify SOCKS proxy (format: socks5h://user:pass@host:port).
 - `--min-length` Skip responses with a length less than the specified value.
+- `--exclude-length` Comma-separated list of response lengths to exclude (e.g., 0,35,125).
 - `--insecure` Skip SSL certificate verification and suppress warnings.
 - `-h, --help` Display this help message.
 

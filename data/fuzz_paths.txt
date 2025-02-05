@@ -8,6 +8,8 @@
 ..;
 /
 ...
+fuzz/..
+static..
 %00
 %01
 %0a
@@ -23,7 +25,8 @@
 #
 ~root
 ~admin
-%2e%2e
+fuzz/%2e%2e
+static%2e%2e
 %252e%252e
 %c0%af
 *
