@@ -29,7 +29,7 @@ Body Tests:
 python3 fbps.py -b "user=user&password=password" -H "Content-Type:application/x-www-form-urlencoded" http://127.0.0.1:5000/bypass
 
 Uppercase Tests:
-python3 fbps.py -L3 http://127.0.0.1:5000/bypass
+python3 fbps.py -L 2 http://127.0.0.1:5000/bypass
 
 NOTE: replace http://127.0.0.1:5000 with your current Flask server IP & Port
 """

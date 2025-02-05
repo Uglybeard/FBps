@@ -61,11 +61,13 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
             else:
                 fuzzed_url = f"{base_url}{'/'.join(path_parts[1:i])}/{fuzz}/{'/'.join(path_parts[i:])}"
             urls_to_test.add(fuzzed_url)
-            urls_to_test.add(fuzzed_url.rstrip('/') if fuzzed_url.endswith('/') else fuzzed_url + '/')
+            if (all or level > 2):
+                urls_to_test.add(fuzzed_url.rstrip('/') if fuzzed_url.endswith('/') else fuzzed_url + '/')
 
     for fuzz in appended_fuzz_paths:
         urls_to_test.add(target_url + fuzz)
-        urls_to_test.add((target_url.rstrip('/') if target_url.endswith('/') else target_url) + fuzz)
+        if (all or level > 2):
+            urls_to_test.add((target_url.rstrip('/') if target_url.endswith('/') else target_url) + fuzz)
 
     if parsed_url.scheme == 'https':
         urls_to_test.add(urlunparse(('http', parsed_url.netloc, parsed_url.path, parsed_url.params, parsed_url.query, parsed_url.fragment)))
@@ -77,16 +79,18 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
         temp_path[i] = temp_path[i].upper()
         uppercase_url = f"{base_url}/{'/'.join(temp_path)}"
         urls_to_test.add(uppercase_url)
-        urls_to_test.add(uppercase_url.rstrip('/') if uppercase_url.endswith('/') else uppercase_url + '/')
+        if (all or level > 2):
+            urls_to_test.add(uppercase_url.rstrip('/') if uppercase_url.endswith('/') else uppercase_url + '/')
 
-    if all or level > 2:
+    if all or level > 1:
         for i in range(len(path_parts)):
             temp_path = path_parts[:]
             for variation in generate_case_variations(path_parts[i]):
                 temp_path[i] = variation
                 case_variation_url = f"{base_url_without_slash}{'/'.join(temp_path)}"
                 urls_to_test.add(case_variation_url)
-                urls_to_test.add(case_variation_url.rstrip('/') if case_variation_url.endswith('/') else case_variation_url + '/')
+                if (all or level > 2):
+                    urls_to_test.add(case_variation_url.rstrip('/') if case_variation_url.endswith('/') else case_variation_url + '/')
 
     return urls_to_test
 
@@ -102,6 +106,11 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
+
+        if(not all and level < 3):
+            for method in methods:
+                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+        
         if all or level > 1:
             for method in methods:
                 for header in default_headers:
@@ -110,7 +119,8 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         headers_dict = parse_headers(headers) if headers else CaseInsensitiveDict()
                         headers_dict[header_parts[0].strip()] = header_parts[1].strip()
                         futures.append(executor.submit(test_url, target_url, method, min_length, exclude_lengths, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
-                        futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
+                        if (all or level > 2):
+                            futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
 
         for url in urls_to_test:
             for method in methods:
@@ -119,7 +129,8 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
         for param in params:
             for method in methods:
                 futures.append(executor.submit(test_url, target_url + "?" + param, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
-                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                if (all or level > 2):
+                    futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
 
         for future in as_completed(futures):
             success_count += future.result()
