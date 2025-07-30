@@ -44,7 +44,8 @@ def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, ve
             data=body,
             cookies=cookies,
             proxies=proxies,
-            verify=not insecure # Ignore SSL verification if the "insecure" flag is enabled. "Verify" is equal to False if "insecure" is true, otherwise it is equal to True.
+            verify=not insecure, # Ignore SSL verification if the "insecure" flag is enabled. "Verify" is equal to False if "insecure" is true, otherwise it is equal to True.
+            timeout=15
         )
         response_length = len(response.content)
         return print_status(method, str(response.status_code), url, min_length, exclude_lengths, headers, cookies, body, verbose, response_length, output_file)
