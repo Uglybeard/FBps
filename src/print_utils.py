@@ -51,6 +51,8 @@ class Colors:
     CYAN = "\033[0;36m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
+    DARK_PURPLE = "\033[38;5;53m"
+
 
 class OutputFormatter:
     # Display mappings
@@ -67,7 +69,7 @@ class OutputFormatter:
         ResultType.REDIRECT: Colors.YELLOW,
         ResultType.BLOCKED: Colors.RED,
         ResultType.SERVER_ERROR: Colors.PURPLE,
-        ResultType.NETWORK_ERROR: Colors.RED
+        ResultType.NETWORK_ERROR: Colors.DARK_PURPLE
     }
     
     @staticmethod
@@ -175,7 +177,7 @@ class ResultManager:
         # Print verbose output
         if verbose:
             if error_message:
-                print(f"{Colors.RED}[X] {method} {url} - Error: {error_message}{Colors.RESET}")
+                print(f"{Colors.DARK_PURPLE}[X] {method} {url} - Error: {error_message}{Colors.RESET}")
             else:
                 print(self.formatter.format_compact(result, colored=True))
         
@@ -217,8 +219,45 @@ class ResultManager:
         with self._lock:
             results = self._results.copy()
         
+        # Group results by type with priority order
+        grouped_results = {
+            "successful_bypasses": [],
+            "potential_bypasses": [],
+            "blocked_requests": [],
+            "server_errors": [],
+            "network_errors": []
+        }
+        
+        # Categorize results
+        for result in results:
+            result_dict = result.to_dict()
+            if result.result_type == ResultType.SUCCESS:
+                grouped_results["successful_bypasses"].append(result_dict)
+            elif result.result_type == ResultType.REDIRECT:
+                grouped_results["potential_bypasses"].append(result_dict)
+            elif result.result_type == ResultType.BLOCKED:
+                grouped_results["blocked_requests"].append(result_dict)
+            elif result.result_type == ResultType.SERVER_ERROR:
+                grouped_results["server_errors"].append(result_dict)
+            elif result.result_type == ResultType.NETWORK_ERROR:
+                grouped_results["network_errors"].append(result_dict)
+        
+        # Create summary metadata
+        summary = {
+            "scan_metadata": {
+                "total_requests": len(results),
+                "successful_bypasses": len(grouped_results["successful_bypasses"]),
+                "potential_bypasses": len(grouped_results["potential_bypasses"]),
+                "blocked_requests": len(grouped_results["blocked_requests"]),
+                "server_errors": len(grouped_results["server_errors"]),
+                "network_errors": len(grouped_results["network_errors"]),
+                "scan_timestamp": time.time()
+            },
+            "results": grouped_results
+        }
+        
         with open(filename, 'w') as f:
-            json.dump([r.to_dict() for r in results], f, indent=2)
+            json.dump(summary, f, indent=2)
     
     def get_stats(self) -> Dict[str, Any]:
         with self._lock:
@@ -246,25 +285,32 @@ class ResultManager:
             print(f"Success rate: {success_rate:.2f}%")
         
         print(f"\n{Colors.BOLD}Result breakdown:{Colors.RESET}")
-        type_colors = {
-            ResultType.SUCCESS.value: Colors.GREEN,
-            ResultType.REDIRECT.value: Colors.YELLOW,
-            ResultType.BLOCKED.value: Colors.RED,
-            ResultType.SERVER_ERROR.value: Colors.PURPLE,
-            ResultType.NETWORK_ERROR.value: Colors.RED
-        }
         
-        for result_type, count in stats['by_result_type'].items():
-            color = type_colors.get(result_type, Colors.RESET)
-            print(f"  {color}{result_type}: {count}{Colors.RESET}")
+        # Combined legend with counts
+        result_mappings = [
+            (ResultType.SUCCESS, Colors.GREEN, "[+] 2xx"),
+            (ResultType.REDIRECT, Colors.YELLOW, "[?] 3xx"), 
+            (ResultType.BLOCKED, Colors.RED, "[-] 4xx"),
+            (ResultType.SERVER_ERROR, Colors.PURPLE, "[!] 5xx"),
+            (ResultType.NETWORK_ERROR, Colors.DARK_PURPLE, "[X] Error")
+        ]
         
-        # Status legend
-        print(f"\n{Colors.BOLD}Status Legend:{Colors.RESET}")
-        print(f"{Colors.GREEN}[+] 2xx{Colors.RESET} - Successful bypass")
-        print(f"{Colors.YELLOW}[?] 3xx{Colors.RESET} - Redirect (potential bypass)")
-        print(f"{Colors.RED}[-] 4xx{Colors.RESET} - Blocked (expected)")
-        print(f"{Colors.PURPLE}[!] 5xx{Colors.RESET} - Server error") 
-        print(f"{Colors.RED}[X] Error{Colors.RESET} - Network/parsing error")
+        for result_type, color, symbol_desc in result_mappings:
+            count = stats['by_result_type'].get(result_type.value, 0)
+            if count > 0:  # Only show categories that have results
+                print(f"  {color}{symbol_desc} - {result_type.value}: {count}{Colors.RESET}")
+        
+        # Show empty categories in gray if no results
+        empty_categories = [
+            (result_type, symbol_desc) for result_type, _, symbol_desc in result_mappings
+            if stats['by_result_type'].get(result_type.value, 0) == 0
+        ]
+        
+        if empty_categories:
+            print(f"\n{Colors.BOLD}Legend (no results):{Colors.RESET}")
+            for result_type, symbol_desc in empty_categories:
+                print(f"  {symbol_desc} - {result_type.value}")
+
     
     def _write_to_file(self, result: HTTPResult, output_file: str) -> None:
         # Only write to JSON file, no more TXT logging
@@ -286,18 +332,14 @@ def log_error(method, url, error, output_file=None):
         method=method, status_code=0, url=url, response_length=0,
         error_message=str(error), output_file=output_file
     )
-    return f"{Colors.RED}[X] {method} {url} - Error: {error}{Colors.RESET}"
+    return f"{Colors.DARK_PURPLE}[X] {method} {url} - Error: {error}{Colors.RESET}"
 
 def print_ordered_results(output_file=None):
     _manager.print_summary()
     if output_file:
         # Export to JSON only if output file is specified
-        json_file = (
-            output_file if output_file.endswith('.json')
-            else output_file.replace('.txt', '.json') if output_file.endswith('.txt')
-            else output_file + '.json')
-        _manager.export_json(json_file)
-        print(f"\n{Colors.CYAN}Results exported to: {json_file}{Colors.RESET}")
+        _manager.export_json(output_file)
+        print(f"\n{Colors.CYAN}Results exported to: {output_file}{Colors.RESET}")
 
 def get_manager() -> ResultManager:
     return _manager
