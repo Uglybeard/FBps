@@ -1,7 +1,3 @@
-"""
-Optimized printing utilities for FBps with clear terminology and concise code
-"""
-
 import threading
 import json
 import time
