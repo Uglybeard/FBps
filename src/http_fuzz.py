@@ -8,6 +8,16 @@ from src.print_utils import print_status, log_error, print_ordered_results
 
 parent_dir = pathlib.Path(__file__).parent.parent
 
+def parse_exclude_lengths(exclude_length):
+    """Parse exclude_length parameter safely"""
+    if not exclude_length:
+        return []
+    try:
+        return [int(x.strip()) for x in exclude_length.split(",") if x.strip()]
+    except ValueError as e:
+        print(f"[!] Invalid exclude-length format: {exclude_length}")
+        return []
+
 def load_fuzz_data():
     """
     Loads fuzz data from files.
@@ -98,7 +108,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     """
     Performs fuzz testing across various HTTP methods, headers, and URL fuzzing using multithreading.
     """
-    exclude_lengths = [int(x) for x in exclude_length.split(",")] if exclude_length else []
+    exclude_lengths = parse_exclude_lengths(exclude_length)
     fuzz_paths, appended_fuzz_paths, params, default_headers = load_fuzz_data()
 
     success_count = 0
