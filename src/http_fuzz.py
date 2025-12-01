@@ -112,6 +112,9 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     exclude_lengths = parse_exclude_lengths(exclude_length)
     fuzz_paths, appended_fuzz_paths, params, default_headers = load_fuzz_data()
 
+    # Create base headers once; always pass copies to avoid shared-mutable/state and race conditions.
+    base_headers = parse_headers(headers) if headers else CaseInsensitiveDict()
+
     success_count = 0
     urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)
 
@@ -120,28 +123,29 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
         if(not all and level < 3):
             for method in methods:
-                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, base_headers.copy(), body, cookie, verbose, proxy, insecure, output_file))
         
         if all or level > 1:
             for method in methods:
                 for header in default_headers:
                     header_parts = header.split(':', 1)
                     if len(header_parts) == 2:
-                        headers_dict = parse_headers(headers) if headers else CaseInsensitiveDict()
+                        # copy base headers before mutating
+                        headers_dict = base_headers.copy()
                         headers_dict[header_parts[0].strip()] = header_parts[1].strip()
                         futures.append(executor.submit(test_url, target_url, method, min_length, exclude_lengths, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
                         if (all or level > 2):
-                            futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, headers_dict, body, cookie, verbose, proxy, insecure, output_file))
+                            futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/', method, min_length, exclude_lengths, headers_dict.copy(), body, cookie, verbose, proxy, insecure, output_file))
 
         for url in urls_to_test:
             for method in methods:
-                futures.append(executor.submit(test_url, url, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, url, method, min_length, exclude_lengths, base_headers.copy(), body, cookie, verbose, proxy, insecure, output_file))
 
         for param in params:
             for method in methods:
-                futures.append(executor.submit(test_url, target_url + "?" + param, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                futures.append(executor.submit(test_url, target_url + "?" + param, method, min_length, exclude_lengths, base_headers.copy(), body, cookie, verbose, proxy, insecure, output_file))
                 if (all or level > 2):
-                    futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, min_length, exclude_lengths, parse_headers(headers), body, cookie, verbose, proxy, insecure, output_file))
+                    futures.append(executor.submit(test_url, target_url.rstrip('/') if target_url.endswith('/') else target_url + '/' + "?" + param, method, min_length, exclude_lengths, base_headers.copy(), body, cookie, verbose, proxy, insecure, output_file))
 
         for future in as_completed(futures):
             success_count += future.result()

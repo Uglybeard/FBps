@@ -4,6 +4,7 @@ from urllib3.exceptions import InsecureRequestWarning
 from src.banner import show_banner
 from src.arg_parser import parse_arguments
 from src.http_fuzz import forbidden_bypass, print_ordered_results
+from urllib.parse import urlparse
 
 def main():
     # Parse command line arguments
@@ -21,6 +22,11 @@ def main():
     level = args.level
     min_length = args.min_length
     exclude_length = args.exclude_length  # No need to convert to string here
+
+    # If the user does not specify the schema, https:// is used
+    parsed = urlparse(target_url)
+    if not parsed.scheme:
+        target_url = "https://" + target_url
 
     # Suppress InsecureRequestWarning if insecure
     if(insecure):
