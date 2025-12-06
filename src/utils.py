@@ -1,6 +1,8 @@
 from requests.structures import CaseInsensitiveDict
 import random
 
+# Hardcoded seed to ensure deterministic generation of case variations
+random.seed(42)
 
 def load_list_from_file(filename):
     """
