@@ -1,3 +1,5 @@
+import time
+import threading
 import requests
 import pathlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -40,6 +42,38 @@ def load_fuzz_data():
     default_headers = load_list_from_file(parent_dir / "data" / "default_headers.txt")
     return fuzz_paths, appended_fuzz_paths, params, default_headers
 
+class RateLimiter:
+    """
+    Simple thread-safe rate limiter based on a minimum interval between requests.
+    """
+
+    def __init__(self, rate_per_sec):
+        """
+        Initialize the rate limiter with a maximum number of requests per second.
+
+        If rate_per_sec is None or less than or equal to zero, no rate limiting is applied.
+        """
+        self.rate_per_sec = rate_per_sec
+        self.lock = threading.Lock()
+        self.last_request_ts = 0.0
+        self.min_interval = 1.0 / rate_per_sec if rate_per_sec and rate_per_sec > 0 else 0.0
+
+    def wait_for_slot(self):
+        """
+        Block the caller until the next request slot is available.
+        """
+        if not self.rate_per_sec or self.min_interval <= 0:
+            return
+
+        with self.lock:
+            now = time.time()
+            elapsed = now - self.last_request_ts
+
+            if elapsed < self.min_interval:
+                time.sleep(self.min_interval - elapsed)
+                now = time.time()
+
+            self.last_request_ts = now
 
 def _flip_trailing_slash(url):
     """
@@ -50,13 +84,16 @@ def _flip_trailing_slash(url):
     return url.rstrip("/") if url.endswith("/") else url + "/"
 
 
-def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, verbose, proxy=None, insecure=False, output_file=None):
+def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, verbose, proxy=None, insecure=False, output_file=None, rate_limiter=None):
     """
     Execute a single HTTP request with the given parameters and print the result.
 
     Returns the success value as determined by print_status.
     """
     try:
+        if rate_limiter is not None: 
+            rate_limiter.wait_for_slot() # Optional global rate limiting across all threads
+
         proxies = {"http": proxy, "https": proxy} if proxy else None
         cookies = parse_cookies(cookie)
 
@@ -186,9 +223,9 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     return urls_to_test
 
 
-def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length, exclude_length, num_threads, proxy, insecure, level, all, output_file=None):
+def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length, exclude_length, num_threads, proxy, insecure, level, all, rate_limit=None, output_file=None):
     """
-    Perform HTTP fuzzing across methods, headers, and URL variants using multithreading.
+    Perform HTTP fuzzing across methods, headers, and URL variants using multithreading and optional rate limiting.
 
     Returns the total number of successful bypasses found.
     """
@@ -199,6 +236,12 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
     success_count = 0
     urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)
+
+    # Global rate limiter shared by all worker threads
+    if rate_limit and rate_limit > 0:
+        rate_limiter = RateLimiter(rate_limit)
+    else:
+        rate_limiter = None
 
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
@@ -221,6 +264,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         proxy,
                         insecure,
                         output_file,
+                        rate_limiter
                     )
                 )
 
@@ -247,6 +291,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                                 proxy,
                                 insecure,
                                 output_file,
+                                rate_limiter
                             )
                         )
 
@@ -267,6 +312,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                                     proxy,
                                     insecure,
                                     output_file,
+                                    rate_limiter
                                 )
                             )
 
@@ -287,6 +333,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         proxy,
                         insecure,
                         output_file,
+                        rate_limiter
                     )
                 )
 
@@ -307,6 +354,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         proxy,
                         insecure,
                         output_file,
+                        rate_limiter
                     )
                 )
                 
@@ -328,6 +376,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                             proxy,
                             insecure,
                             output_file,
+                            rate_limiter
                         )
                     )
 

@@ -27,6 +27,7 @@ def main():
     level = args.level
     min_length = args.min_length
     exclude_length = args.exclude_length
+    rate_limit = args.rate_limit
 
     # If no scheme is provided, default to HTTPS
     parsed = urlparse(target_url)
@@ -66,6 +67,7 @@ def main():
         insecure,
         level,
         all,
+        rate_limit,
         output_file,
     )
 

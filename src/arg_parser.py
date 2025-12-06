@@ -15,6 +15,7 @@ def parse_arguments():
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
     parser.add_argument("-o", "--output", help="Specify an output JSON file to save the results (e.g. results.json)")
     parser.add_argument("-t", "--threads", type=int, default=5, help="Specify number of threads (default: 5)")
+    parser.add_argument("-rl", "--rate-limit", type=float, help="Maximum number of requests per second (global across all threads)")
     parser.add_argument("-p", "--proxy", help="Specify SOCKS or HTTP proxy (e.g., socks5h://user:pass@host:port)")
     parser.add_argument("--min-length", type=int, help="Skip responses with a length less than the specified value")
     parser.add_argument("--exclude-length", type=str, help="Comma-separated list of response lengths to exclude (e.g., 0,35,125)")
