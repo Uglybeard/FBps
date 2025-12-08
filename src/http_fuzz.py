@@ -159,14 +159,15 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 urls_to_test.add(_flip_trailing_slash(fuzzed_url))
 
     # Appended path fuzzing (Level 1 and above)
-    normalized_target = target_url.rstrip("/") if target_url.endswith("/") else target_url
+    normalized_target = target_url.rstrip("/") # Ensure no trailing slash at the end, to append fuzz directly (e.g., /target -> /targetFUZZ)
 
     for fuzz in appended_fuzz_paths:
-        urls_to_test.add(target_url + fuzz)
+        appended_url = normalized_target + fuzz
+        urls_to_test.add(appended_url)
 
         # Off-by-slash variants (Level 3 and above)
         if all or level > 2:
-            urls_to_test.add(normalized_target + fuzz)
+            urls_to_test.add(_flip_trailing_slash(appended_url))
 
     # Protocol switching (Level 1 and above)
     if parsed_url.scheme == "https":
