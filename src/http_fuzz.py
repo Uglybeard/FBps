@@ -200,7 +200,12 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     for i in range(len(path_parts)):
         temp_path = path_parts[:]
         temp_path[i] = temp_path[i].upper()
-        uppercase_url = f"{base_url}/{'/'.join(temp_path)}"
+
+        # Remove empty segments to avoid double slashes
+        clean_segments = [p for p in temp_path if p]
+        path = "/".join(clean_segments)
+
+        uppercase_url = f"{base_url_without_slash}/{path}" if path else base_url_without_slash
         urls_to_test.add(uppercase_url)
 
         # Off-by-slash variants (Level 3 and above)
@@ -363,9 +368,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                     futures.append(
                         executor.submit(
                             test_url,
-                            target_url.rstrip("/")
-                            if target_url.endswith("/")
-                            else target_url + "/" + "?" + param,
+                            target_url.rstrip("/") if target_url.endswith("/") else target_url + "/" + "?" + param,
                             method,
                             min_length,
                             exclude_lengths,
