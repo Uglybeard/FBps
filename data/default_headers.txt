@@ -187,4 +187,4 @@ X-Forwarded-Server: 10.0.0.1
 X-Original-URL: /admin/console
 X-Original-URL: /admin
 X-Rewrite-URL: /admin/console
-X-Original-URL: /admin
+X-Rewrite-URL: /admin

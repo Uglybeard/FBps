@@ -4,21 +4,28 @@
 
 FBps (Forbidden Bypass) is a fast and efficient fuzzing script designed for bypassing HTTP status codes 403 and 401. This tool enables security researchers and penetration testers to identify potential vulnerabilities in web applications through extensive HTTP method testing and request manipulation.
 
+> Use this tool only on systems you own or are explicitly authorized to test.
+
 ## Features
 
-- **Flexible HTTP Method Testing**: Specify one or more HTTP methods, including custom methods, to evaluate server responses.
-- **Header Manipulation**: Easily add custom headers to your requests, including default headers for common bypass techniques.
-- **Body and Cookie Support**: Customize your requests with a specified body and cookies to simulate different user sessions.
-- **URL Fuzzing**: Automatically generate variations of the target URL to uncover hidden endpoints or methods.
-- **Uppercase Tests**: Test for case sensitivity in paths (e.g., /path vs /PaTh).
-- **Off by Slash**: Test for variations in URL paths by adding or removing trailing slashes.
-- **Multithreading**: Leverage multiple threads to speed up testing and increase the efficiency of your requests.
-- **Proxy Support**: Route requests through SOCKS proxies for anonymity and to bypass network restrictions.
-- **Verbose Mode**: Enable detailed output for in-depth analysis of each request and response.
+- **Flexible HTTP Method Testing**: specify one or more HTTP methods, including custom methods, to evaluate server responses.
+- **Level-based Testing**: use `-L` to choose how aggressive and exhaustive the fuzzing should be.
+- **URL Fuzzing**: automatically generate variations of the target URL to uncover hidden endpoints or methods.
+- **Query Parameter Fuzzing**: automatically append parameters from a wordlist to the target URL to trigger alternative code paths.
+- **Header Manipulation**: easily add custom headers to your requests, including default headers for common bypass techniques.
+- **Body and Cookie Support**: customize your requests with a specified body and cookies to simulate different user sessions and scenarios.
+- **Uppercase and Case-Variation Tests**: test for path case sensitivity (e.g., `/path` vs `/PATH` and other mixed-case variants).
+- **Off-by-slash**: test variations in URL paths by adding or removing trailing slashes.
+- **Multithreading**: use multiple threads with `-t` to speed up testing and increase throughput.
+- **Proxy Support**: route requests through HTTP or SOCKS proxies (e.g. Burp, ZAP, VPN gateways).
+- **Global Rate Limiting**: limit the total number of requests per second with `-rl` to avoid overwhelming the target or triggering rate limits.
+- **Response Filtering**: reduce noise using `--min-length` and `--exclude-length` to ignore uninteresting responses.
+- **Verbose Mode and JSON Output**: enable detailed per-request logs with `-v` and export structured results to a JSON file with `-o`.
 
 ## Installation
 
-To install FBps, first ensure you have Python 3 installed on your machine. Then, install the required dependencies using the requirements.txt file.
+1. Ensure you have Python 3 installed on your system.
+2. Install the required dependencies using the `requirements.txt` file:
 
 ```bash
 pip install -r requirements.txt
@@ -26,73 +33,119 @@ pip install -r requirements.txt
 
 ## Usage
 
-fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-A] [-L LEVEL] [-v] [-o OUTPUT] [-t THREADS] [-p PROXY] [--min-length MIN_LENGTH] [--insecure] url
-
+```bash
+python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES]
+               [-A] [-L LEVEL] [-v] [-o OUTPUT.json] [-t THREADS]
+               [-rl RATE_LIMIT] [-p PROXY]
+               [--min-length MIN_LENGTH] [--exclude-length L1,L2,...]
+               [--insecure]
+               url
+```
 
 ## Options
 
-- `-m, --method` Specify one or more HTTP methods, separated by commas (e.g., GET,POST,HEAD). The default method is GET.
-- `-H, --header` Specify headers in `Key: Value` format (can be used multiple times).
-- `-b, --body` Specify the request body.
-- `-c, --cookies` Specify cookies in `Key = Value` format. Multiple cookies should be separated by a semicolon (;).
-- `-A, --all` Perform all tests with common HTTP methods.
-- `-L, --level`: Specify the level of tests to perform, from 1 to 3 (default: 1). Each level includes all tests from the previous levels:
-    - Level 1: URL fuzzing, protocol switching.
-    - Level 2: Headers fuzzing and Uppercase URL variations.
-    - Level 3: Off by slash.
-- `-v, --verbose` Enable verbose output.
-- `-o, --output` Specify an output file to save the results.
-- `-t, --threads` Specify number of threads (default: 5).
-- `-p, --proxy` Specify SOCKS proxy (format: socks5h://user:pass@host:port).
-- `--min-length` Skip responses with a length less than the specified value.
-- `--exclude-length` Comma-separated list of response lengths to exclude (e.g., 0,35,125).
-- `--insecure` Skip SSL certificate verification and suppress warnings.
-- `-h, --help` Display this help message.
+- `url`  
+  Target URL to test. If the scheme is omitted, `https://` is automatically prepended.
+
+- `-m, --method`  
+  HTTP method or comma-separated list of methods (e.g., `GET,POST,HEAD`).  
+  The default method is `GET`.
+
+- `-L, --level`  
+  Level of tests to perform (1–3, default: 1). Each level includes all tests from the previous levels:
+    - Level 1: URL fuzzing, query parameter fuzzing, protocol switching, uppercase path tests.
+    - Level 2: headers fuzzing and additional mixed-case URL variations.
+    - Level 3: extended off-by-slash testing across generated URLs and headers.
+
+- `-A, --all`  
+  Perform ALL tests with a set of common HTTP methods.
+
+- `-H, --header`  
+  Specify headers in `Key: Value` format (can be used multiple times).
+
+- `-b, --body`  
+  Specify the request body.
+
+- `-c, --cookies`  
+  Specify cookies in `key=value` format, separated by semicolons (e.g. `session=abc123; isAdmin=true`).
+
+- `-t, --threads`  
+  Number of worker threads (default: 5).
+
+- `-rl, --rate-limit`  
+  Maximum number of requests per second, globally across all threads.  
+  If not set, rate limiting is disabled.
+
+- `-p, --proxy`  
+  Use an HTTP or SOCKS proxy (e.g. `http://127.0.0.1:8080` or `socks5h://user:pass@host:port`).
+
+- `--min-length`  
+  Ignore responses whose body length is less than the specified value.
+
+- `--exclude-length`  
+  Comma-separated list of exact response lengths to ignore (e.g. `0,35,125`).
+
+- `--insecure`  
+  Skip SSL certificate verification and suppress warnings.
+
+- `-v, --verbose`  
+  Enable detailed per-request output.
+
+- `-o, --output`  
+  Save results to a JSON file (e.g. `results.json`).
 
 ## Examples
 
-1. Basic usage
+1. Basic GET scan
 
 ```bash
-python fbps.py https://example.com
-```
-2. Specify HTTP methods and level
-
-```bash
-python fbps.py -m GET,POST https://example.com -L 3
+python fbps.py https://example.com/secret
 ```
 
-3. Perform all tests with all common HTTP methods
+2. Increase the test level
 
 ```bash
-python fbps.py -A https://example.com
+python fbps.py -L 3 https://example.com/secret
 ```
 
-4. Using custom Headers, Cookies and Body
+3. Scan with multiple HTTP methods
 
 ```bash
-python fbps.py -H "User-Agent: fuzzing-tool" -c "test=1; foo=2" -b "user=user&password=pass" -m GET https://example.com
+python fbps.py -m GET,POST,PUT https://example.com/secret
 ```
 
-5. Specify number of threads (default=5)
+4. Perform all tests with all common HTTP methods
 
 ```bash
-python fbps.py -t 40 https://example.com
+python fbps.py -A https://example.com/secret
 ```
 
-6. Using a Proxy
+5. Using custom headers, cookies and body
 
 ```bash
-python fbps.py -p socks5h://user:pass@host:port https://example.com
+python fbps.py -H "User-Agent: FBps" -c "test=1; foo=2" -b "user=user&pwd=pass" https://example.com/secret
 ```
 
-7. Enable Verbose Output and Save Results
+6. Specify number of threads
 
 ```bash
-python fbps.py -v -o results.txt https://example.com
+python fbps.py -t 20 https://example.com/secret
+```
+
+7. Route traffic through a proxy (SOCKS or HTTP)
+
+```bash
+python fbps.py -p http://127.0.0.1:8080 https://example.com/secret
+python fbps.py -p socks5h://user:pass@host:port https://example.com/secret
+```
+
+8. Enable verbose output and save results to JSON
+
+```bash
+python fbps.py -v -o results.json https://example.com
 ```
 
 ## Notes
 
-- **Multithreading**: Adjust the `-t` (threads) parameter according to the speed of the target server. Higher thread counts may speed up testing but could lead to throttling or blocking by the server.
-- **Fuzzing Paths**: The tool loads fuzzing paths from `data/fuzz_paths.txt`, `data/appended_fuzz_paths.txt`, and query parameters from `data/params.txt`. Ensure these files are in the same directory as the script for extended fuzzing.
+- **Fuzzing Data Files**: the tool loads fuzzing data (paths, headers, parameters) from the text files shipped with the project (e.g. `fuzz_paths.txt`, `appended_fuzz_paths.txt`, `params.txt`, `default_headers.txt`). Make sure these files are present in the `data/` directory when running the script.
+- **Responsible Use**: this tool is intended for security research and academic purposes. Always obtain permission before testing a target.
