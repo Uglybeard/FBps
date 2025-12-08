@@ -345,11 +345,14 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
         # Query parameter fuzzing (Level 1 and above)
         for param in params:
+            url_with_param = f"{target_url}?{param}"
+            flipped_url_with_param = f"{_flip_trailing_slash(target_url)}?{param}"
+
             for method in methods:
                 futures.append(
                     executor.submit(
                         test_url,
-                        f"{target_url}?{param}",
+                        url_with_param,
                         method,
                         min_length,
                         exclude_lengths,
@@ -369,7 +372,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                     futures.append(
                         executor.submit(
                             test_url,
-                            target_url.rstrip("/") if target_url.endswith("/") else target_url + "/" + "?" + param,
+                            flipped_url_with_param,
                             method,
                             min_length,
                             exclude_lengths,
