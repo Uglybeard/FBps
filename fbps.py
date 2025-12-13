@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from src.banner import show_banner
 from src.arg_parser import parse_arguments
 from src.http_fuzz import forbidden_bypass, print_ordered_results
+from src.utils import load_list_from_file
 
 
 def main():
@@ -39,8 +40,7 @@ def main():
         warnings.simplefilter("ignore", InsecureRequestWarning)
 
     # Common HTTP methods to test when -A/--all is set
-    # FOO is an invalid/custom method used to test method handling on the server side
-    common_methods = ['GET', 'POST', 'HEAD', 'PUT', 'OPTIONS', 'PATCH', 'FOO']
+    common_methods = load_list_from_file("data/methods.txt")
 
     # Determine which methods to test
     if all:
