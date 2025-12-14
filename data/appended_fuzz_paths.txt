@@ -1,10 +1,13 @@
 .json
-/.json
 .html
 .css
+.php
+.xml
+.txt
 ~
 /~
 /&
 \/\/
 /-
 /°/
+/index.html

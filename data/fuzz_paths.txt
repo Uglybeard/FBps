@@ -1,3 +1,4 @@
+.
 %2e
 %252e
 %ef%bc%8f
@@ -21,7 +22,6 @@ static..
 %26
 %2f
 %3f
-%2e
 #
 ~root
 ~admin

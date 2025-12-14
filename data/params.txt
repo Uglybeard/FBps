@@ -1,11 +1,8 @@
-id=123
-id=123&isAdmin=true
-id=123&user_id=124
+isAdmin=1
+isAdmin=true
+debug=1
+debug=true
 id=0
 id=-1
 id=99999999
-id=
-id=%20
-id=&
-id==
-name=fuzz
+test=

@@ -159,14 +159,15 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 urls_to_test.add(_flip_trailing_slash(fuzzed_url))
 
     # Appended path fuzzing (Level 1 and above)
-    normalized_target = target_url.rstrip("/") if target_url.endswith("/") else target_url
+    normalized_target = target_url.rstrip("/") # Ensure no trailing slash at the end, to append fuzz directly (e.g., /target -> /targetFUZZ)
 
     for fuzz in appended_fuzz_paths:
-        urls_to_test.add(target_url + fuzz)
+        appended_url = normalized_target + fuzz
+        urls_to_test.add(appended_url)
 
         # Off-by-slash variants (Level 3 and above)
         if all or level > 2:
-            urls_to_test.add(normalized_target + fuzz)
+            urls_to_test.add(_flip_trailing_slash(appended_url))
 
     # Protocol switching (Level 1 and above)
     if parsed_url.scheme == "https":
@@ -200,7 +201,12 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     for i in range(len(path_parts)):
         temp_path = path_parts[:]
         temp_path[i] = temp_path[i].upper()
-        uppercase_url = f"{base_url}/{'/'.join(temp_path)}"
+
+        # Remove empty segments to avoid double slashes
+        clean_segments = [p for p in temp_path if p]
+        path = "/".join(clean_segments)
+
+        uppercase_url = f"{base_url_without_slash}/{path}" if path else base_url_without_slash
         urls_to_test.add(uppercase_url)
 
         # Off-by-slash variants (Level 3 and above)
@@ -339,11 +345,14 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
         # Query parameter fuzzing (Level 1 and above)
         for param in params:
+            url_with_param = f"{target_url}?{param}"
+            flipped_url_with_param = f"{_flip_trailing_slash(target_url)}?{param}"
+
             for method in methods:
                 futures.append(
                     executor.submit(
                         test_url,
-                        f"{target_url}?{param}",
+                        url_with_param,
                         method,
                         min_length,
                         exclude_lengths,
@@ -363,9 +372,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                     futures.append(
                         executor.submit(
                             test_url,
-                            target_url.rstrip("/")
-                            if target_url.endswith("/")
-                            else target_url + "/" + "?" + param,
+                            flipped_url_with_param,
                             method,
                             min_length,
                             exclude_lengths,

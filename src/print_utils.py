@@ -1,6 +1,7 @@
 import threading
 import json
 import time
+from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
@@ -306,6 +307,10 @@ class ResultManager:
             },
             "results": grouped_results
         }
+
+        out_path = Path(filename)
+        if out_path.parent:
+            out_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(filename, 'w') as f:
             json.dump(summary, f, indent=2)
