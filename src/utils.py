@@ -17,6 +17,32 @@ def load_list_from_file(filename):
     except FileNotFoundError:
         print(f"[!] File '{filename}' not found.")
         return []
+    
+def load_raw_bytes_from_file(path):
+    """
+    Load raw byte values from the specified file.
+    
+    Returns a list of single-byte bytes objects.
+    """
+    raw_lines = load_list_from_file(path)
+    raw_bytes = []
+
+    for line in raw_lines:
+        value = line.strip()
+        if not value:
+            continue
+        try:
+            if value.startswith("\\x") and len(value) == 4:
+                raw_bytes.append(bytes([int(value[2:], 16)]))
+            elif value.startswith("0x") and len(value) == 4:
+                raw_bytes.append(bytes([int(value[2:], 16)]))
+            else:
+                raw_bytes.append(bytes([int(value, 16)]))
+        except ValueError:
+            print(f"[!] Invalid raw byte entry in {path}: {line!r}")
+
+    return raw_bytes
+
 
 
 def generate_case_variations(s):
