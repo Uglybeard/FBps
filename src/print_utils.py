@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from urllib.parse import urlparse
 
 
 class ResultType(Enum):
@@ -165,6 +166,22 @@ class OutputFormatter:
 
         if result.error_message:
             lines.append(f"    Error:      {result.error_message}")
+
+        if "\\x" in result.url:
+            try:
+                parsed = urlparse(result.url)
+                scheme = parsed.scheme or "http"
+                netloc = parsed.netloc
+                path = parsed.path or "/"
+
+                curl_cmd = (
+                    f"curl '{scheme}://{netloc}' "
+                    f"--request-target \"$(printf '{path}')\" "
+                    f"-X {result.method}"
+                )
+                lines.append(f"    Reproduce:  {curl_cmd}")
+            except Exception:
+                pass
 
         return "\n".join(lines)
 
