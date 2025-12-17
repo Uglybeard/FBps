@@ -4,6 +4,7 @@ import socket
 import ssl
 import requests
 import pathlib
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse, urlunparse
 
@@ -335,6 +336,36 @@ def test_raw_request_target(parsed_url, method, raw_target, display_url, min_len
                 pass
 
 
+def generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, level):
+    """
+    Generate additional URLs by downgrading API version segments like /api/v3/users -> /api/v2/users, /api/v1/users.
+    """
+    urls = set()
+    path_parts = parsed_url.path.split("/")
+
+    for idx, segment in enumerate(path_parts):
+        match = re.fullmatch(r"[vV](\d+)", segment)
+        if not match:
+            continue
+
+        current_version = int(match.group(1))
+        if current_version <= 1:
+            continue
+
+        for new_version in range(current_version - 1, 0, -1):
+            new_parts = path_parts[:]
+            new_parts[idx] = f"v{new_version}"
+            new_path = "/".join(new_parts)
+            downgraded_url = f"{base_url_without_slash}{new_path}"
+            urls.add(downgraded_url)
+
+            # Off-by-slash variants (Level 3 and above)
+            if all or level > 2:
+                urls.add(_flip_trailing_slash(downgraded_url))
+
+    return urls
+
+
 def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level):
     """
     Generate a set of fuzzed URLs based on the target URL and fuzz paths.
@@ -429,6 +460,11 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 # Off-by-slash variants (Level 3 and above)
                 if all or level > 2:
                     urls_to_test.add(_flip_trailing_slash(case_variation_url))
+    
+    # Version downgrade variants (Level 1 and above)
+    urls_to_test.update(
+        generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, level)
+    )
 
     return urls_to_test
 
