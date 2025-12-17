@@ -505,7 +505,7 @@ def generate_trim_raw_targets(parsed_url, raw_bytes, all, level):
 
 def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length,
                      exclude_length, num_threads, proxy, insecure, level, all,
-                     rate_limit=None, output_file=None):
+                     rate_limit=None, output_file=None, user_agent=None):
     """
     Perform HTTP fuzzing across methods, headers, and URL variants using multithreading and optional rate limiting.
 
@@ -518,6 +518,11 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     raw_bytes = load_raw_bytes()
 
     base_headers = parse_headers(headers) if headers else CaseInsensitiveDict()
+
+    # Set custom User-Agent if provided
+    if user_agent and "User-Agent" not in base_headers:
+        base_headers["User-Agent"] = user_agent
+
 
     success_count = 0
     urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)

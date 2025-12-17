@@ -19,6 +19,7 @@ def main():
     headers = args.header
     body = args.body
     cookie = args.cookies
+    user_agent = args.user_agent
     verbose = args.verbose
     num_threads = args.threads
     proxy = args.proxy
@@ -69,6 +70,7 @@ def main():
         all,
         rate_limit,
         output_file,
+        user_agent
     )
 
     # Print summary of bypasses and total execution time

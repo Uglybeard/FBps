@@ -10,6 +10,7 @@ def parse_arguments():
     parser.add_argument("-H", "--header", action="append", help="Specify headers in 'Key: Value' format")
     parser.add_argument("-b", "--body", help="Specify the request body")
     parser.add_argument("-c", "--cookies", help="Specify cookies")
+    parser.add_argument("-ua", "--user-agent", help="Set a custom User-Agent header")
     parser.add_argument("-A", "--all", action="store_true", help="Perform all tests with common HTTP methods")
     parser.add_argument("-L", "--level", type=int, default=1, help="Level of tests to perform (1-3, default 1)")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
