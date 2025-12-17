@@ -5,7 +5,7 @@ import ssl
 import requests
 import pathlib
 import re
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED, CancelledError
 from urllib.parse import urlparse, urlunparse
 
 from requests.structures import CaseInsensitiveDict
@@ -88,6 +88,7 @@ class RateLimiter:
                 now = time.time()
 
             self.last_request_ts = now
+            
 
 
 def _flip_trailing_slash(url):
@@ -140,6 +141,8 @@ def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, ve
             output_file
         )
 
+    except KeyboardInterrupt:
+        raise  # Propagate interrupt to main thread
     except requests.RequestException as e:
         error_message = log_error(method, url, e, output_file)
         if verbose and error_message:
@@ -316,6 +319,8 @@ def test_raw_request_target(parsed_url, method, raw_target, display_url, min_len
             output_file,
         )
 
+    except KeyboardInterrupt:
+        raise  # Propagate interrupt to main thread
     except socket.timeout:
         error_message = "Raw trim test error: Connection timeout"
         if verbose:
@@ -697,7 +702,19 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         )
                     )
 
-        for future in as_completed(futures):
-            success_count += future.result()
+        # Handle completion of futures with interrupt support
+        try:
+            for future in as_completed(futures):
+                try:
+                    success_count += future.result()
+                except KeyboardInterrupt:
+                    # Cancel all remaining futures
+                    for f in futures:
+                        f.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
+        except KeyboardInterrupt:
+            print("\n[!] Cancelling pending requests...")
+            raise
 
     return success_count
