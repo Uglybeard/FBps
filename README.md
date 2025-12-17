@@ -86,6 +86,18 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-ua USER_AGE
   - `-v, --verbose` per-request output
   - `-o, --output` export results to JSON
 
+## Tips (reduce false positives)
+
+Web servers, reverse proxies and WAFs often apply different normalization rules (path decoding, trimming, slash handling, header parsing, caching), so fuzzing may produce **false positives**: you might see `200 OK` responses that are not real bypasses, but just different “normal” behaviors compared to what you expected.
+
+Recommended workflow:
+- Start with **low coverage** (e.g. `-L 1`) and review the results manually.
+- Identify “noise” responses that are consistently returned (often same-length pages, default error pages, redirects, etc.).
+- Filter them out using:
+  - `--exclude-length` to ignore known response sizes
+  - `--min-length` to skip empty or small responses
+- Once filters are tuned, increase coverage (`-L 2` / `-L 3` / `-A`) to reduce noise while keeping meaningful findings.
+
 ## Examples
 
 1) Basic scan (default method, Level 1)
