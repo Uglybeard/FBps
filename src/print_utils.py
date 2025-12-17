@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
+from urllib.parse import urlparse
 
 
 class ResultType(Enum):
@@ -50,7 +51,8 @@ class HTTPResult:
             'body': self.body,
             'result_type': self.result_type.value,
             'timestamp': self.timestamp,
-            'error_message': self.error_message
+            'error_message': self.error_message,
+            'reproduce': getattr(self, "reproduce", None)
         }
 
 
@@ -166,6 +168,10 @@ class OutputFormatter:
         if result.error_message:
             lines.append(f"    Error:      {result.error_message}")
 
+        reproduce = getattr(result, "reproduce", None)
+        if reproduce:
+            lines.append(f"    Reproduce:  {reproduce}")
+
         return "\n".join(lines)
 
     @staticmethod
@@ -206,22 +212,44 @@ class ResultManager:
         # Create result object and classify it.
         result_type = self.formatter.determine_result_type(status_code, error_message)
         result = HTTPResult(
-            method=method, url=url, status_code=status_code, response_length=response_length,
-            headers=headers or {}, cookies=cookies or {}, body=body,
-            result_type=result_type, timestamp=time.time(), error_message=error_message
+            method=method,
+            url=url,
+            status_code=status_code,
+            response_length=response_length,
+            headers=headers or {},
+            cookies=cookies or {},
+            body=body,
+            result_type=result_type,
+            timestamp=time.time(),
+            error_message=error_message
         )
 
-        # Apply length-based filters before storing the result.
+        # Length-based filters
         if min_length and response_length < min_length:
             return 0
         if exclude_lengths and response_length in exclude_lengths:
             return 0
 
-        # Store result in a thread-safe manner.
+        # Build "reproduce" command for raw-bytes URLs
+        if "\\x" in url:
+            try:
+                parsed = urlparse(url)
+                scheme = parsed.scheme or "http"
+                netloc = parsed.netloc
+                path = parsed.path or "/"
+                reproduce = (
+                    f"curl '{scheme}://{netloc}' "
+                    f"--request-target \"$(printf '{path}')\" "
+                    f"-X {method}"
+                )
+                setattr(result, "reproduce", reproduce)
+            except Exception:
+                pass
+
         with self._lock:
             self._results.append(result)
 
-        # Print verbose output if requested.
+        # Print verbose output if requested
         if verbose:
             if error_message:
                 print(f"{Colors.DARK_PURPLE}[X] {method} {url} - Error: {error_message}{Colors.RESET}")
@@ -241,10 +269,10 @@ class ResultManager:
             print("\nNo results to display.")
             return
 
-        # Print high-level statistics and breakdown.
+        # Print high-level statistics and breakdown
         self._print_statistics(results)
 
-        # Extract successful bypasses.
+        # Extract successful bypasses
         successful = [r for r in results if r.result_type == ResultType.SUCCESS]
         if not successful:
             print(f"\n{Colors.BOLD}No successful bypasses found.{Colors.RESET}")
@@ -252,12 +280,12 @@ class ResultManager:
 
         print(f"\n{Colors.BOLD}SUCCESSFUL BYPASSES:{Colors.RESET}")
 
-        # Group successful results by HTTP method.
+        # Group successful results by HTTP method
         by_method: Dict[str, List[HTTPResult]] = {}
         for result in successful:
             by_method.setdefault(result.method, []).append(result)
 
-        # Print detailed output grouped by method.
+        # Print detailed output grouped by method
         for method in sorted(by_method.keys()):
             for result in by_method[method]:
                 print(self.formatter.format_detailed(result, colored=True))
@@ -271,7 +299,7 @@ class ResultManager:
         with self._lock:
             results = self._results.copy()
 
-        # Group results by type with priority order.
+        # Group results by type with priority order
         grouped_results = {
             "successful_bypasses": [],
             "potential_bypasses": [],
@@ -280,7 +308,7 @@ class ResultManager:
             "network_errors": []
         }
 
-        # Categorize results into the groups above.
+        # Categorize results into the groups above
         for result in results:
             result_dict = result.to_dict()
             if result.result_type == ResultType.SUCCESS:
@@ -294,7 +322,7 @@ class ResultManager:
             elif result.result_type == ResultType.NETWORK_ERROR:
                 grouped_results["network_errors"].append(result_dict)
 
-        # Build top-level summary metadata.
+        # Build top-level summary metadata
         summary = {
             "scan_metadata": {
                 "total_requests": len(results),
@@ -350,7 +378,7 @@ class ResultManager:
 
         print(f"\n{Colors.BOLD}Result breakdown:{Colors.RESET}")
 
-        # Combined legend with counts for non-empty categories.
+        # Combined legend with counts for non-empty categories
         result_mappings = [
             (ResultType.SUCCESS, Colors.GREEN, "[+] 2xx"),
             (ResultType.REDIRECT, Colors.YELLOW, "[?] 3xx"),
@@ -359,21 +387,22 @@ class ResultManager:
             (ResultType.NETWORK_ERROR, Colors.DARK_PURPLE, "[X] Error")
         ]
 
-        for result_type, color, symbol_desc in result_mappings:
-            count = stats['by_result_type'].get(result_type.value, 0)
+        for result_type_enum, color, symbol_desc in result_mappings:
+            count = stats['by_result_type'].get(result_type_enum.value, 0)
             if count > 0:
-                print(f"  {color}{symbol_desc} - {result_type.value}: {count}{Colors.RESET}")
+                print(f"  {color}{symbol_desc} - {result_type_enum.value}: {count}{Colors.RESET}")
 
-        # Show categories with zero results as a legend section.
+        # Show categories with zero results as a legend section
         empty_categories = [
-            (result_type, symbol_desc) for result_type, _, symbol_desc in result_mappings
-            if stats['by_result_type'].get(result_type.value, 0) == 0
+            (result_type_enum, symbol_desc) for result_type_enum, _, symbol_desc in result_mappings
+            if stats['by_result_type'].get(result_type_enum.value, 0) == 0
         ]
 
         if empty_categories:
             print(f"\n{Colors.BOLD}Legend (no results):{Colors.RESET}")
-            for result_type, symbol_desc in empty_categories:
-                print(f"  {symbol_desc} - {result_type.value}")
+            for result_type_enum, symbol_desc in empty_categories:
+                print(f"  {symbol_desc} - {result_type_enum.value}")
+
 
 # Global instance for backward compatibility
 _manager = ResultManager()
@@ -408,7 +437,7 @@ def print_ordered_results(output_file=None):
     """
     _manager.print_summary()
     if output_file:
-        # Export to JSON only if output file is specified
+       # Export to JSON only if output file is specified
         _manager.export_json(output_file)
         print(f"\n{Colors.CYAN}Results exported to: {output_file}{Colors.RESET}")
 

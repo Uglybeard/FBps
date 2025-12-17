@@ -1,5 +1,7 @@
 import time
 import threading
+import socket
+import ssl
 import requests
 import pathlib
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -7,7 +9,7 @@ from urllib.parse import urlparse, urlunparse
 
 from requests.structures import CaseInsensitiveDict
 
-from src.utils import load_list_from_file, generate_case_variations, parse_headers, parse_cookies
+from src.utils import load_list_from_file, generate_case_variations, parse_headers, parse_cookies, load_raw_bytes_from_file
 from src.print_utils import print_status, log_error, print_ordered_results
 
 parent_dir = pathlib.Path(__file__).parent.parent
@@ -42,6 +44,17 @@ def load_fuzz_data():
     default_headers = load_list_from_file(parent_dir / "data" / "default_headers.txt")
     return fuzz_paths, appended_fuzz_paths, params, default_headers
 
+def load_raw_bytes():
+    """
+    Load raw byte values from the raw_bytes.txt file.
+
+    Returns a list of single-byte bytes objects.
+    """
+    try:
+        return load_raw_bytes_from_file(parent_dir / "data" / "raw_bytes.txt")
+    except FileNotFoundError:
+        return []
+
 class RateLimiter:
     """
     Simple thread-safe rate limiter based on a minimum interval between requests.
@@ -75,6 +88,7 @@ class RateLimiter:
 
             self.last_request_ts = now
 
+
 def _flip_trailing_slash(url):
     """
     Toggle the trailing slash in the given URL.
@@ -84,15 +98,16 @@ def _flip_trailing_slash(url):
     return url.rstrip("/") if url.endswith("/") else url + "/"
 
 
-def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, verbose, proxy=None, insecure=False, output_file=None, rate_limiter=None):
+def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, verbose,
+             proxy=None, insecure=False, output_file=None, rate_limiter=None):
     """
     Execute a single HTTP request with the given parameters and print the result.
 
     Returns the success value as determined by print_status.
     """
     try:
-        if rate_limiter is not None: 
-            rate_limiter.wait_for_slot() # Optional global rate limiting across all threads
+        if rate_limiter is not None:
+            rate_limiter.wait_for_slot()  # Optional global rate limiting across all threads
 
         proxies = {"http": proxy, "https": proxy} if proxy else None
         cookies = parse_cookies(cookie)
@@ -131,6 +146,195 @@ def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, ve
         return 0
 
 
+def test_raw_request_target(parsed_url, method, raw_target, display_url, min_length, exclude_lengths, headers, body, cookie,
+    verbose, proxy=None, insecure=False, output_file=None, rate_limiter=None):
+    """
+    Send a single HTTP request using a raw request-target (with arbitrary bytes).
+
+    Supports HTTP and HTTPS proxies via CONNECT method.
+    """
+    # Global rate limiting
+    if rate_limiter is not None:
+        rate_limiter.wait_for_slot()
+
+    host = parsed_url.hostname
+    if not host:
+        error_msg = "Invalid host in URL for raw trim test"
+        log_error(method, display_url, error_msg, output_file)
+        if verbose:
+            print(error_msg)
+        return 0
+
+    port = parsed_url.port
+    if not port:
+        port = 443 if parsed_url.scheme == "https" else 80
+
+    cookies = parse_cookies(cookie)
+    body_bytes = body.encode("utf-8") if body else b""
+
+    # Determine connection target (proxy or direct)
+    if proxy:
+        # Parse proxy URL
+        proxy_url = urlparse(proxy if "://" in proxy else f"http://{proxy}")
+        connect_host = proxy_url.hostname
+        connect_port = proxy_url.port or 8080
+        use_proxy = True
+    else:
+        connect_host = host
+        connect_port = port
+        use_proxy = False
+
+    sock = None
+    try:
+        # Direct TCP connection (to proxy or origin)
+        sock = socket.create_connection((connect_host, connect_port), timeout=15)
+        sock.settimeout(15)
+
+        # Handle HTTPS through proxy using CONNECT
+        if use_proxy and parsed_url.scheme == "https":
+            # Send CONNECT request to establish tunnel
+            connect_request = f"CONNECT {host}:{port} HTTP/1.1\r\n"
+            connect_request += f"Host: {host}:{port}\r\n\r\n"
+            sock.sendall(connect_request.encode("ascii"))
+
+            # Read CONNECT response
+            connect_response = b""
+            while b"\r\n\r\n" not in connect_response:
+                chunk = sock.recv(4096)
+                if not chunk:
+                    raise socket.error("Proxy closed connection during CONNECT")
+                connect_response += chunk
+
+            # Verify CONNECT success
+            status_line = connect_response.split(b"\r\n")[0]
+            if b"200" not in status_line:
+                raise socket.error(f"Proxy CONNECT failed: {status_line.decode('ascii', errors='ignore')}")
+
+        # Optional TLS wrapping (after CONNECT for proxy, directly for non-proxy HTTPS)
+        if parsed_url.scheme == "https":
+            context = ssl.create_default_context()
+            if insecure:
+                context.check_hostname = False
+                context.verify_mode = ssl.CERT_NONE
+            sock = context.wrap_socket(sock, server_hostname=host)
+
+        # Build request line with raw_target bytes
+        request_parts = []
+
+        # For HTTP through proxy, use absolute URI; otherwise use raw_target as-is
+        if use_proxy and parsed_url.scheme == "http":
+            absolute_target = f"{parsed_url.scheme}://{parsed_url.netloc}".encode("ascii") + raw_target
+            request_parts.append(method.encode("ascii") + b" ")
+            request_parts.append(absolute_target)
+            request_parts.append(b" HTTP/1.1\r\n")
+        else:
+            request_parts.append(method.encode("ascii") + b" ")
+            request_parts.append(raw_target)
+            request_parts.append(b" HTTP/1.1\r\n")
+
+        # Host header
+        request_parts.append(f"Host: {parsed_url.netloc}\r\n".encode("ascii"))
+
+        # Custom headers
+        if headers:
+            for k, v in headers.items():
+                try:
+                    header_line = f"{k}: {v}\r\n".encode("latin-1")
+                    request_parts.append(header_line)
+                except UnicodeEncodeError:
+                    if verbose:
+                        print(f"[!] Warning: Could not encode header {k}: {v}")
+
+        # Cookie header
+        if cookies:
+            cookie_str = "; ".join(f"{k}={v}" for k, v in cookies.items())
+            try:
+                request_parts.append(f"Cookie: {cookie_str}\r\n".encode("latin-1"))
+            except UnicodeEncodeError:
+                if verbose:
+                    print("[!] Warning: Could not encode cookies")
+
+        # Body / Content-Length
+        if body_bytes:
+            request_parts.append(
+                f"Content-Length: {len(body_bytes)}\r\n".encode("ascii")
+            )
+
+        # Close connection after response
+        request_parts.append(b"Connection: close\r\n\r\n")
+
+        # Append body
+        request = b"".join(request_parts) + body_bytes
+
+        # Send request
+        sock.sendall(request)
+
+        # Read response
+        chunks = []
+        while True:
+            chunk = sock.recv(4096)
+            if not chunk:
+                break
+            chunks.append(chunk)
+
+        raw_response = b"".join(chunks)
+        if not raw_response:
+            error_msg = "Empty response in raw trim test"
+            log_error(method, display_url, error_msg, output_file)
+            if verbose:
+                print(error_msg)
+            return 0
+
+        # Parse status line
+        first_line, _, rest = raw_response.partition(b"\r\n")
+        try:
+            parts = first_line.split(b" ", 2)
+            status_code = int(parts[1]) if len(parts) >= 2 else 0
+        except (ValueError, IndexError):
+            status_code = 0
+
+        # Find the body (after headers)
+        headers_end = raw_response.find(b"\r\n\r\n")
+        if headers_end != -1:
+            body_data = raw_response[headers_end + 4:]
+            response_length = len(body_data)
+        else:
+            response_length = 0
+
+        return print_status(
+            method,
+            str(status_code),
+            display_url,
+            min_length,
+            exclude_lengths,
+            headers,
+            cookies,
+            body,
+            verbose,
+            response_length,
+            output_file,
+        )
+
+    except socket.timeout:
+        error_message = "Raw trim test error: Connection timeout"
+        if verbose:
+            print(error_message)
+        log_error(method, display_url, error_message, output_file)
+        return 0
+    except (socket.error, ssl.SSLError) as e:
+        error_message = f"Raw trim test error: {e}"
+        if verbose:
+            print(error_message)
+        log_error(method, display_url, error_message, output_file)
+        return 0
+    finally:
+        if sock:
+            try:
+                sock.close()
+            except:
+                pass
+
+
 def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level):
     """
     Generate a set of fuzzed URLs based on the target URL and fuzz paths.
@@ -159,7 +363,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 urls_to_test.add(_flip_trailing_slash(fuzzed_url))
 
     # Appended path fuzzing (Level 1 and above)
-    normalized_target = target_url.rstrip("/") # Ensure no trailing slash at the end, to append fuzz directly (e.g., /target -> /targetFUZZ)
+    normalized_target = target_url.rstrip("/")  # Ensure no trailing slash at the end, to append fuzz directly (e.g., /target -> /targetFUZZ)
 
     for fuzz in appended_fuzz_paths:
         appended_url = normalized_target + fuzz
@@ -229,7 +433,43 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     return urls_to_test
 
 
-def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length, exclude_length, num_threads, proxy, insecure, level, all, rate_limit=None, output_file=None):
+def generate_trim_raw_targets(parsed_url, raw_bytes, all, level):
+    """
+    Build raw request-target variants to test trim inconsistencies.
+
+    Returns a list of tuples: (display_url, raw_request_target_bytes)
+    """
+    raw_targets = []
+
+    # Example: /trim/ -> base "/trim"
+    base_path = parsed_url.path.rstrip("/")
+    if not base_path:
+        base_path = "/"
+
+    for b in raw_bytes:
+        # Variant without trailing slash: /trim\xNN
+        target_no_slash = base_path.encode("ascii") + b
+        display_no_slash = (
+            f"{parsed_url.scheme}://{parsed_url.netloc}"
+            f"{base_path}\\x{b[0]:02x}"
+        )
+        raw_targets.append((display_no_slash, target_no_slash))
+
+        # Off-by-slash variants (Level 3 and above) (e.g., /trim/\xNN)
+        if all or level > 2:
+            target_with_slash = (base_path + "/").encode("ascii") + b
+            display_with_slash = (
+                f"{parsed_url.scheme}://{parsed_url.netloc}"
+                f"{base_path}/\\x{b[0]:02x}"
+            )
+            raw_targets.append((display_with_slash, target_with_slash))
+
+    return raw_targets
+
+
+def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length,
+                     exclude_length, num_threads, proxy, insecure, level, all,
+                     rate_limit=None, output_file=None):
     """
     Perform HTTP fuzzing across methods, headers, and URL variants using multithreading and optional rate limiting.
 
@@ -238,10 +478,14 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     exclude_lengths = parse_exclude_lengths(exclude_length)
     fuzz_paths, appended_fuzz_paths, params, default_headers = load_fuzz_data()
 
+    # Load optional raw bytes for trim inconsistency tests
+    raw_bytes = load_raw_bytes()
+
     base_headers = parse_headers(headers) if headers else CaseInsensitiveDict()
 
     success_count = 0
     urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)
+    parsed_url = urlparse(target_url)
 
     # Global rate limiter shared by all worker threads
     if rate_limit and rate_limit > 0:
@@ -322,7 +566,32 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                                 )
                             )
 
-        # URL Fuzzing performed using URLS generated in the generate_fuzzed_urls function (Level 1 and above)
+        # Trim inconsistencies using raw request-target bytes (Level 2 and above)
+        if raw_bytes and (all or level > 1):
+            trim_targets = generate_trim_raw_targets(parsed_url, raw_bytes, all, level)
+            for display_url, raw_target in trim_targets:
+                for method in methods:
+                    futures.append(
+                        executor.submit(
+                            test_raw_request_target,
+                            parsed_url,
+                            method,
+                            raw_target,
+                            display_url,
+                            min_length,
+                            exclude_lengths,
+                            base_headers.copy(),
+                            body,
+                            cookie,
+                            verbose,
+                            proxy,
+                            insecure,
+                            output_file,
+                            rate_limiter,
+                        )
+                    )
+
+        # URL Fuzzing performed using URLs generated in the generate_fuzzed_urls function (Level 1 and above)
         for url in urls_to_test:
             for method in methods:
                 futures.append(
@@ -366,7 +635,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         rate_limiter
                     )
                 )
-                
+
                 # Off-by-slash variants (Level 3 and above)
                 if all or level > 2:
                     futures.append(
