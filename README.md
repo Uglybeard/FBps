@@ -52,7 +52,7 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-ua USER_AGE
 
 ## Options
 
-- Target & scope:
+- Target & coverage:
   - `url` target URL
   - `-L, --level` test level (1–3)
   - `-A, --all` perform all tests with common HTTP methods (loaded from `data/methods.txt`)
@@ -108,7 +108,7 @@ python3 fbps.py --exclude-length 1234,5678 --min-length 100 https://example.com/
 python3 fbps.py -L 3 https://example.com/secret
 ```
 
-4) All common methods
+4) All tests with common methods
 
 ```bash
 python3 fbps.py -A https://example.com/secret
