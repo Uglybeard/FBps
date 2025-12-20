@@ -3,6 +3,7 @@
 ![FBps banner](/img/fbps.png)
 
 [![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
+[![Security Testing](https://img.shields.io/badge/purpose-security%20testing-red.svg)]()
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 FBps (Forbidden Bypass) is a fast fuzzing script focused on access-control testing (HTTP 401/403) by generating request variations across methods, URLs and headers to highlight misconfigurations, normalization inconsistencies and unexpected routing behaviors.
