@@ -7,6 +7,8 @@
 
 FBps (Forbidden Bypass) is a fast fuzzing script focused on access-control testing (HTTP 401/403) by generating request variations across methods, URLs and headers to highlight misconfigurations, normalization inconsistencies and unexpected routing behaviors.
 
+For reproducible local testing and payload tuning, use **[FBpsLab](https://github.com/Uglybeard/FBpsLab)**.
+
 > Use this tool only on systems you own or are explicitly authorized to test.
 
 ## Key features
@@ -21,27 +23,6 @@ FBps (Forbidden Bypass) is a fast fuzzing script focused on access-control testi
 - Query parameter fuzzing (wordlist-driven)
 - Proxy support, multithreading, global rate limiting
 - Response filtering and optional JSON reporting
-
-## Test levels (what runs where)
-
-Each level includes everything from the previous one.
-
-**Level 1**
-- URL fuzzing using payloads in `data/fuzz_paths.txt`
-- URL suffix/appended fuzzing using `data/appended_fuzz_paths.txt`
-- Query parameter fuzzing using `data/params.txt`
-- Protocol switching test (http ↔ https) on the original target URL
-- Uppercase path segment variants
-- API version downgrade variants (e.g. `v3 → v2 → v1` when a `/vN` segment is present)
-- Basic trailing-slash toggle on the original target URL
-
-**Level 2**
-- Mixed-case path segment variations
-- Header fuzzing using `data/default_headers.txt`
-- Trim inconsistencies via raw requests using `data/raw_bytes.txt`
-
-**Level 3**
-- Off-by-slash variants extended across generated URLs, header fuzzing, query params and trim raw targets
 
 ## Installation
 
@@ -107,53 +88,62 @@ Recommended workflow:
   - `--min-length` to skip empty or small responses
 - Once filters are tuned, increase coverage (`-L 2` / `-L 3` / `-A`) to reduce noise while keeping meaningful findings.
 
-## Lab Environment
-
-For controlled testing and payload tuning, **[FBpsLab](https://github.com/Uglybeard/FBpsLab)** provides a containerized environment with intentionally misconfigured Nginx/Flask scenarios demonstrating location precedence issues, normalization discrepancies, header-based bypass conditions, and API versioning gaps. The lab includes documented vulnerable endpoints useful for validating detection coverage and minimizing false positives before production testing.
-
 ## Examples
 
-1) Basic scan (default method, Level 1)
+1) Basic scan (Level 1)
 
 ```bash
 python3 fbps.py https://example.com/secret
 ```
 
-2) Increase coverage
-
-```bash
-python3 fbps.py -L 3 https://example.com/secret
-```
-
-3) Run all tests using the common methods list
-
-```bash
-python3 fbps.py -A https://example.com/secret
-```
-
-3) Filter out noise responses
+2) Filter noise
 
 ```bash
 python3 fbps.py --exclude-length 1234,5678 --min-length 100 https://example.com/secret
 ```
 
-5) Explicit methods + custom User-Agent + JSON output
+3) Increase coverage (Level 3)
 
 ```bash
-python3 fbps.py -m GET,POST,HEAD -ua "FBps/1.0" -o results.json https://example.com/secret
+python3 fbps.py -L 3 https://example.com/secret
 ```
 
-6) Proxy + global rate limit
+4) All common methods
 
 ```bash
-python3 fbps.py -p http://127.0.0.1:8080 -rl 5 -L 2 https://example.com/secret
+python3 fbps.py -A https://example.com/secret
 ```
 
-7) Increase the number of threads
+5) Proxy + rate limit + JSON Output
 
 ```bash
-python3 fbps.py -t 20 -A https://example.com/secret
+python3 fbps.py -L 3 -p http://127.0.0.1:8080 -rl 5 -o results.json https://example.com/secret
 ```
+
+## Test levels (what runs where)
+
+Each level includes everything from the previous one.
+
+**Level 1**
+- URL fuzzing using payloads in `data/fuzz_paths.txt`
+- URL suffix/appended fuzzing using `data/appended_fuzz_paths.txt`
+- Query parameter fuzzing using `data/params.txt`
+- Protocol switching test (http ↔ https) on the original target URL
+- Uppercase path segment variants
+- API version downgrade variants (e.g. `v3 → v2 → v1` when a `/vN` segment is present)
+- Basic trailing-slash toggle on the original target URL
+
+**Level 2**
+- Mixed-case path segment variations
+- Header fuzzing using `data/default_headers.txt`
+- Trim inconsistencies via raw requests using `data/raw_bytes.txt`
+
+**Level 3**
+- Off-by-slash variants extended across generated URLs, header fuzzing, query params and trim raw targets
+
+## Lab Environment
+
+For controlled testing and payload tuning, **[FBpsLab](https://github.com/Uglybeard/FBpsLab)** provides a containerized environment with intentionally misconfigured Nginx/Flask scenarios demonstrating location precedence issues, normalization discrepancies, header-based bypass conditions, and API versioning gaps. The lab includes documented vulnerable endpoints useful for validating detection coverage and minimizing false positives before production testing.
 
 ## Notes
 
