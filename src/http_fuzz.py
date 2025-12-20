@@ -4,7 +4,8 @@ import socket
 import ssl
 import requests
 import pathlib
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
+from concurrent.futures import ThreadPoolExecutor, as_completed, wait, FIRST_COMPLETED, CancelledError
 from urllib.parse import urlparse, urlunparse
 
 from requests.structures import CaseInsensitiveDict
@@ -87,6 +88,7 @@ class RateLimiter:
                 now = time.time()
 
             self.last_request_ts = now
+            
 
 
 def _flip_trailing_slash(url):
@@ -139,6 +141,8 @@ def test_url(url, method, min_length, exclude_lengths, headers, body, cookie, ve
             output_file
         )
 
+    except KeyboardInterrupt:
+        raise  # Propagate interrupt to main thread
     except requests.RequestException as e:
         error_message = log_error(method, url, e, output_file)
         if verbose and error_message:
@@ -315,6 +319,8 @@ def test_raw_request_target(parsed_url, method, raw_target, display_url, min_len
             output_file,
         )
 
+    except KeyboardInterrupt:
+        raise  # Propagate interrupt to main thread
     except socket.timeout:
         error_message = "Raw trim test error: Connection timeout"
         if verbose:
@@ -333,6 +339,36 @@ def test_raw_request_target(parsed_url, method, raw_target, display_url, min_len
                 sock.close()
             except:
                 pass
+
+
+def generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, level):
+    """
+    Generate additional URLs by downgrading API version segments like /api/v3/users -> /api/v2/users, /api/v1/users.
+    """
+    urls = set()
+    path_parts = parsed_url.path.split("/")
+
+    for idx, segment in enumerate(path_parts):
+        match = re.fullmatch(r"[vV](\d+)", segment)
+        if not match:
+            continue
+
+        current_version = int(match.group(1))
+        if current_version <= 1:
+            continue
+
+        for new_version in range(current_version - 1, 0, -1):
+            new_parts = path_parts[:]
+            new_parts[idx] = f"v{new_version}"
+            new_path = "/".join(new_parts)
+            downgraded_url = f"{base_url_without_slash}{new_path}"
+            urls.add(downgraded_url)
+
+            # Off-by-slash variants (Level 3 and above)
+            if all or level > 2:
+                urls.add(_flip_trailing_slash(downgraded_url))
+
+    return urls
 
 
 def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level):
@@ -429,6 +465,11 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 # Off-by-slash variants (Level 3 and above)
                 if all or level > 2:
                     urls_to_test.add(_flip_trailing_slash(case_variation_url))
+    
+    # Version downgrade variants (Level 1 and above)
+    urls_to_test.update(
+        generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, level)
+    )
 
     return urls_to_test
 
@@ -469,7 +510,7 @@ def generate_trim_raw_targets(parsed_url, raw_bytes, all, level):
 
 def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_length,
                      exclude_length, num_threads, proxy, insecure, level, all,
-                     rate_limit=None, output_file=None):
+                     rate_limit=None, output_file=None, user_agent=None):
     """
     Perform HTTP fuzzing across methods, headers, and URL variants using multithreading and optional rate limiting.
 
@@ -482,6 +523,11 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     raw_bytes = load_raw_bytes()
 
     base_headers = parse_headers(headers) if headers else CaseInsensitiveDict()
+
+    # Set custom User-Agent if provided
+    if user_agent and "User-Agent" not in base_headers:
+        base_headers["User-Agent"] = user_agent
+
 
     success_count = 0
     urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)
@@ -656,7 +702,19 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                         )
                     )
 
-        for future in as_completed(futures):
-            success_count += future.result()
+        # Handle completion of futures with interrupt support
+        try:
+            for future in as_completed(futures):
+                try:
+                    success_count += future.result()
+                except KeyboardInterrupt:
+                    # Cancel all remaining futures
+                    for f in futures:
+                        f.cancel()
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise
+        except KeyboardInterrupt:
+            print("\n[!] Cancelling pending requests...")
+            raise
 
     return success_count
