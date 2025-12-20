@@ -42,7 +42,13 @@ Each level includes everything from the previous one.
 
 ## Installation
 
-1. Ensure you have Python 3 installed.
+1. Clone the repository:
+
+```bash
+git clone https://github.com/Uglybeard/FBps.git
+cd FBps
+```
+
 2. Install dependencies:
 
 ```bash
