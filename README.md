@@ -2,6 +2,9 @@
 
 ![FBps banner](/img/fbps.png)
 
+[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 FBps (Forbidden Bypass) is a fast fuzzing script focused on access-control testing (HTTP 401/403) by generating request variations across methods, URLs and headers to highlight misconfigurations, normalization inconsistencies and unexpected routing behaviors.
 
 > Use this tool only on systems you own or are explicitly authorized to test.
@@ -104,42 +107,52 @@ Recommended workflow:
   - `--min-length` to skip empty or small responses
 - Once filters are tuned, increase coverage (`-L 2` / `-L 3` / `-A`) to reduce noise while keeping meaningful findings.
 
+## Lab Environment
+
+For controlled testing and payload tuning, **[FBpsLab](https://github.com/Uglybeard/FBpsLab)** provides a containerized environment with intentionally misconfigured Nginx/Flask scenarios demonstrating location precedence issues, normalization discrepancies, header-based bypass conditions, and API versioning gaps. The lab includes documented vulnerable endpoints useful for validating detection coverage and minimizing false positives before production testing.
+
 ## Examples
 
 1) Basic scan (default method, Level 1)
 
 ```bash
-python fbps.py https://example.com/secret
+python3 fbps.py https://example.com/secret
 ```
 
 2) Increase coverage
 
 ```bash
-python fbps.py -L 3 https://example.com/secret
+python3 fbps.py -L 3 https://example.com/secret
 ```
 
-4) Run all tests using the common methods list
+3) Run all tests using the common methods list
 
 ```bash
-python fbps.py -A https://example.com/secret
+python3 fbps.py -A https://example.com/secret
+```
+
+3) Filter out noise responses
+
+```bash
+python3 fbps.py --exclude-length 1234,5678 --min-length 100 https://example.com/secret
 ```
 
 5) Explicit methods + custom User-Agent + JSON output
 
 ```bash
-python fbps.py -m GET,POST,HEAD -ua "FBps/1.0" -o results.json https://example.com/secret
+python3 fbps.py -m GET,POST,HEAD -ua "FBps/1.0" -o results.json https://example.com/secret
 ```
 
 6) Proxy + global rate limit
 
 ```bash
-python fbps.py -p http://127.0.0.1:8080 -rl 5 -L 2 https://example.com/secret
+python3 fbps.py -p http://127.0.0.1:8080 -rl 5 -L 2 https://example.com/secret
 ```
 
 7) Increase the number of threads
 
 ```bash
-python fbps.py -t 20 -A https://example.com/secret
+python3 fbps.py -t 20 -A https://example.com/secret
 ```
 
 ## Notes
