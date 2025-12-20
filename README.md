@@ -11,6 +11,8 @@ For reproducible local testing and payload tuning, use **[FBpsLab](https://githu
 
 > Use this tool only on systems you own or are explicitly authorized to test.
 
+<br>
+
 ## Key features
 
 - Level-based scanning (`-L`) to control how exhaustive the test set is
@@ -23,6 +25,8 @@ For reproducible local testing and payload tuning, use **[FBpsLab](https://githu
 - Query parameter fuzzing (wordlist-driven)
 - Proxy support, multithreading, global rate limiting
 - Response filtering and optional JSON reporting
+
+<br>
 
 ## Installation
 
@@ -39,6 +43,8 @@ cd FBps
 pip install -r requirements.txt
 ```
 
+<br>
+
 ## Usage
 
 ```bash
@@ -49,6 +55,8 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-ua USER_AGE
                [--insecure]
                url
 ```
+
+<br>
 
 ## Options
 
@@ -76,6 +84,8 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-ua USER_AGE
   - `-v, --verbose` per-request output
   - `-o, --output` export results to JSON
 
+<br>
+
 ## Tips (reduce false positives)
 
 Web servers, reverse proxies and WAFs often apply different normalization rules (path decoding, trimming, slash handling, header parsing, caching), so fuzzing may produce **false positives**: you might see `200 OK` responses that are not real bypasses, but just different “normal” behaviors compared to what you expected.
@@ -87,6 +97,8 @@ Recommended workflow:
   - `--exclude-length` to ignore known response sizes
   - `--min-length` to skip empty or small responses
 - Once filters are tuned, increase coverage (`-L 2` / `-L 3` / `-A`) to reduce noise while keeping meaningful findings.
+
+<br>
 
 ## Examples
 
@@ -120,6 +132,8 @@ python3 fbps.py -A https://example.com/secret
 python3 fbps.py -L 3 -p http://127.0.0.1:8080 -rl 5 -o results.json https://example.com/secret
 ```
 
+<br>
+
 ## Test levels (what runs where)
 
 Each level includes everything from the previous one.
@@ -141,9 +155,13 @@ Each level includes everything from the previous one.
 **Level 3**
 - Off-by-slash variants extended across generated URLs, header fuzzing, query params and trim raw targets
 
+<br>
+
 ## Lab Environment
 
 For controlled testing and payload tuning, **[FBpsLab](https://github.com/Uglybeard/FBpsLab)** provides a containerized environment with intentionally misconfigured Nginx/Flask scenarios demonstrating location precedence issues, normalization discrepancies, header-based bypass conditions, and API versioning gaps. The lab includes documented vulnerable endpoints useful for validating detection coverage and minimizing false positives before production testing.
+
+<br>
 
 ## Notes
 
