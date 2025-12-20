@@ -6,7 +6,9 @@
 [![Security Testing](https://img.shields.io/badge/Purpose-Security%20Testing-red.svg)]()
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-FBps (Forbidden Bypass) is a fast fuzzing script focused on access-control testing (HTTP 401/403) by generating request variations across methods, URLs and headers to highlight misconfigurations, normalization inconsistencies and unexpected routing behaviors.
+FBps (Forbidden Bypass) is a fast HTTP fuzzer designed to discover access control bypass vulnerabilities (401/403 bypass) by generating request variations across methods, URLs, and headers.
+
+It detects misconfigurations, normalization inconsistencies, and unexpected routing behaviors in web applications and reverse proxies.
 
 For reproducible local testing and payload tuning, use **[FBpsLab](https://github.com/Uglybeard/FBps-lab)**.
 
