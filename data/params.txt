@@ -1,8 +1,13 @@
 isAdmin=1
 isAdmin=true
+role=admin
 debug=1
 debug=true
+order=desc
+sort_by=date
 id=0
-id=-1
-id=99999999
-test=
+verbose=true
+mode=admin
+user=admin
+limit=25
+test=foo
