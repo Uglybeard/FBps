@@ -3,16 +3,16 @@
 %252e
 %ef%bc%8f
 
+/
 ;
 /;/
 .;
 ..;
-/
 ...
 fuzz/..
 static..
+#/..
 %00
-%01
 %0a
 %0d
 %09
@@ -22,7 +22,6 @@ static..
 %26
 %2f
 %3f
-#
 ~root
 ~admin
 fuzz/%2e%2e
