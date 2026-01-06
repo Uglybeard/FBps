@@ -364,7 +364,7 @@ def generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, lev
             downgraded_url = f"{base_url_without_slash}{new_path}"
             urls.add(downgraded_url)
 
-            # Off-by-slash variants (Level 3 and above)
+            # Trailing Slash variants (Level 3 and above)
             if all or level > 2:
                 urls.add(_flip_trailing_slash(downgraded_url))
 
@@ -394,7 +394,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
 
             urls_to_test.add(fuzzed_url)
 
-            # Off-by-slash variants (Level 3 and above)
+            # Trailing Slash variants (Level 3 and above)
             if all or level > 2:
                 urls_to_test.add(_flip_trailing_slash(fuzzed_url))
 
@@ -405,7 +405,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
         appended_url = normalized_target + fuzz
         urls_to_test.add(appended_url)
 
-        # Off-by-slash variants (Level 3 and above)
+        # Trailing Slash variants (Level 3 and above)
         if all or level > 2:
             urls_to_test.add(_flip_trailing_slash(appended_url))
 
@@ -449,7 +449,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
         uppercase_url = f"{base_url_without_slash}/{path}" if path else base_url_without_slash
         urls_to_test.add(uppercase_url)
 
-        # Off-by-slash variants (Level 3 and above)
+        # Trailing Slash variants (Level 3 and above)
         if all or level > 2:
             urls_to_test.add(_flip_trailing_slash(uppercase_url))
 
@@ -462,7 +462,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
                 case_variation_url = f"{base_url_without_slash}{'/'.join(temp_path)}"
                 urls_to_test.add(case_variation_url)
 
-                # Off-by-slash variants (Level 3 and above)
+                # Trailing Slash variants (Level 3 and above)
                 if all or level > 2:
                     urls_to_test.add(_flip_trailing_slash(case_variation_url))
     
@@ -496,7 +496,7 @@ def generate_trim_raw_targets(parsed_url, raw_bytes, all, level):
         )
         raw_targets.append((display_no_slash, target_no_slash))
 
-        # Off-by-slash variants (Level 3 and above) (e.g., /trim/\xNN)
+        # Trailing Slash variants (Level 3 and above) (e.g., /trim/\xNN)
         if all or level > 2:
             target_with_slash = (base_path + "/").encode("ascii") + b
             display_with_slash = (
@@ -542,7 +542,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     with ThreadPoolExecutor(max_workers=num_threads) as executor:
         futures = []
 
-        # Basic Off-by-slash test, performed only if the Off-by-slash test is excluded (Level < 3)
+        # Basic Trailing Slash Inconsistencies test, performed only if the Trailing Slash Inconsistencies test is excluded (Level < 3)
         if not all and level < 3:
             base_url_for_methods = _flip_trailing_slash(target_url)
             for method in methods:
@@ -591,7 +591,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                             )
                         )
 
-                        # Off-by-slash variants (Level 3 and above)
+                        # Trailing Slash variants (Level 3 and above)
                         if all or level > 2:
                             toggled_target = _flip_trailing_slash(target_url)
                             futures.append(
@@ -682,7 +682,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
                     )
                 )
 
-                # Off-by-slash variants (Level 3 and above)
+                # Trailing Slash variants (Level 3 and above)
                 if all or level > 2:
                     futures.append(
                         executor.submit(

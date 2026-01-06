@@ -142,7 +142,7 @@ Each level includes everything from the previous one.
 - Trim inconsistencies via raw requests using `data/raw_bytes.txt`
 
 **Level 3**
-- Off-by-slash variants extended across generated URLs, header fuzzing, query params and trim raw targets
+- Trailing-slash variants extended across generated URLs, header fuzzing, query params and trim raw targets
 
 ## Lab Environment
 
