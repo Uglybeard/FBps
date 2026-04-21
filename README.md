@@ -150,7 +150,7 @@ For controlled testing and payload tuning, **[FBpsLab](https://github.com/Uglybe
 
 ## Notes
 
-- **Wordlists / payload sources**: FBps loads fuzzing data from `data/` (e.g. `fuzz_paths.txt`, `appended_fuzz_paths.txt`, `params.txt`, `default_headers.txt`). Tune coverage by editing these files.
+- **Wordlists / payload sources**: FBps loads fuzzing data from `data/` (e.g. `path_fuzz.txt`, `path_suffix.txt`, `default_headers.txt`). Tune coverage by editing these files.
 - **Common methods list (`-A`)**: methods are loaded from `data/methods.txt` so you can customize the set without changing code.
 - **Trim inconsistencies (optional)**: level 2+ also tests raw request-target byte suffixes to detect normalization discrepancies. When using a proxy (e.g., Burp/ZAP), keep in mind that “raw” request-target bytes may be normalized or rewritten by the proxy chain, which can reduce the effectiveness of trim inconsistency checks.
 - **Responsible use**: run only with explicit authorization and prefer a controlled lab environment when tuning payloads and levels.
