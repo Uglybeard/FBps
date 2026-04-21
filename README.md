@@ -128,8 +128,8 @@ python3 fbps.py -L 3 -p http://127.0.0.1:8080 -rl 5 -o results.json https://exam
 Each level includes everything from the previous one.
 
 **Level 1**
-- URL fuzzing using payloads in `data/fuzz_paths.txt`
-- URL suffix/appended fuzzing using `data/appended_fuzz_paths.txt`
+- URL fuzzing using payloads in `data/path_fuzz.txt`
+- URL suffix/appended fuzzing using `data/path_suffix.txt`
 - Query parameter fuzzing using `data/params.txt`
 - Protocol switching test (http ↔ https) on the original target URL
 - Uppercase path segment variants
