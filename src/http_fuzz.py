@@ -37,13 +37,13 @@ def load_fuzz_data():
     Load fuzzing data from files under the data/ directory.
 
     Returns:
-        fuzz_paths, appended_fuzz_paths, params, default_headers
+        path_fuzz, path_suffix, params, default_headers
     """
-    fuzz_paths = load_list_from_file(parent_dir / "data" / "fuzz_paths.txt")
-    appended_fuzz_paths = load_list_from_file(parent_dir / "data" / "appended_fuzz_paths.txt")
+    path_fuzz = load_list_from_file(parent_dir / "data" / "path_fuzz.txt")
+    path_suffix = load_list_from_file(parent_dir / "data" / "path_suffix.txt")
     params = load_list_from_file(parent_dir / "data" / "params.txt")
     default_headers = load_list_from_file(parent_dir / "data" / "default_headers.txt")
-    return fuzz_paths, appended_fuzz_paths, params, default_headers
+    return path_fuzz, path_suffix, params, default_headers
 
 def load_raw_bytes():
     """
@@ -371,7 +371,7 @@ def generate_version_downgrade_urls(parsed_url, base_url_without_slash, all, lev
     return urls
 
 
-def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level):
+def generate_fuzzed_urls(target_url, path_fuzz, path_suffix, all, level):
     """
     Generate a set of fuzzed URLs based on the target URL and fuzz paths.
 
@@ -385,7 +385,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     path_parts = parsed_url.path.split("/")
 
     # Path-based URL fuzzing (Level 1 and above)
-    for fuzz in fuzz_paths:
+    for fuzz in path_fuzz:
         for i in range(1, len(path_parts) + 1):
             if i == 1:
                 fuzzed_url = f"{base_url}{'/'.join(path_parts[1:i])}{fuzz}/{'/'.join(path_parts[i:])}"
@@ -401,7 +401,7 @@ def generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level
     # Appended path fuzzing (Level 1 and above)
     normalized_target = target_url.rstrip("/")  # Ensure no trailing slash at the end, to append fuzz directly (e.g., /target -> /targetFUZZ)
 
-    for fuzz in appended_fuzz_paths:
+    for fuzz in path_suffix:
         appended_url = normalized_target + fuzz
         urls_to_test.add(appended_url)
 
@@ -517,7 +517,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
     Returns the total number of successful bypasses found.
     """
     exclude_lengths = parse_exclude_lengths(exclude_length)
-    fuzz_paths, appended_fuzz_paths, params, default_headers = load_fuzz_data()
+    path_fuzz, path_suffix, params, default_headers = load_fuzz_data()
 
     # Load optional raw bytes for trim inconsistency tests
     raw_bytes = load_raw_bytes()
@@ -530,7 +530,7 @@ def forbidden_bypass(target_url, headers, body, cookie, methods, verbose, min_le
 
 
     success_count = 0
-    urls_to_test = generate_fuzzed_urls(target_url, fuzz_paths, appended_fuzz_paths, all, level)
+    urls_to_test = generate_fuzzed_urls(target_url, path_fuzz, path_suffix, all, level)
     parsed_url = urlparse(target_url)
 
     # Global rate limiter shared by all worker threads
