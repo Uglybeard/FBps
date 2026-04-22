@@ -32,8 +32,8 @@ For reproducible local testing and payload tuning, use **[FBpsLab](https://githu
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/Uglybeard/FBps.git
-cd FBps
+git clone https://github.com/Uglybeard/fbps.git
+cd fbps
 ```
 
 2. Install dependencies:
