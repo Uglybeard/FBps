@@ -53,6 +53,38 @@ python fbps.py [-h] [-m METHOD] [-H HEADER] [-b BODY] [-c COOKIES] [-ua USER_AGE
                url
 ```
 
+## Examples
+
+1) Basic scan (Level 1)
+
+```bash
+python3 fbps.py https://example.com/secret
+```
+
+2) Filter noise
+
+```bash
+python3 fbps.py --exclude-length 1234,5678 --min-length 100 https://example.com/secret
+```
+
+3) Increase coverage (Level 3)
+
+```bash
+python3 fbps.py -L 3 https://example.com/secret
+```
+
+4) All tests with common methods
+
+```bash
+python3 fbps.py -A https://example.com/secret
+```
+
+5) Proxy + rate limit + JSON Output
+
+```bash
+python3 fbps.py -L 3 -p http://127.0.0.1:8080 -rl 5 -o results.json https://example.com/secret
+```
+
 ## Options
 
 - Target & coverage:
@@ -90,38 +122,6 @@ Recommended workflow:
   - `--exclude-length` to ignore known response sizes
   - `--min-length` to skip empty or small responses
 - Once filters are tuned, increase coverage (`-L 2` / `-L 3` / `-A`) to reduce noise while keeping meaningful findings.
-
-## Examples
-
-1) Basic scan (Level 1)
-
-```bash
-python3 fbps.py https://example.com/secret
-```
-
-2) Filter noise
-
-```bash
-python3 fbps.py --exclude-length 1234,5678 --min-length 100 https://example.com/secret
-```
-
-3) Increase coverage (Level 3)
-
-```bash
-python3 fbps.py -L 3 https://example.com/secret
-```
-
-4) All tests with common methods
-
-```bash
-python3 fbps.py -A https://example.com/secret
-```
-
-5) Proxy + rate limit + JSON Output
-
-```bash
-python3 fbps.py -L 3 -p http://127.0.0.1:8080 -rl 5 -o results.json https://example.com/secret
-```
 
 ## Test levels (what runs where)
 
